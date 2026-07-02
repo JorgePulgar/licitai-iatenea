@@ -1,0 +1,86 @@
+# ============================================
+# Secretos y configuración local
+# ============================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ============================================
+# Python (backend)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ============================================
+# Node / Frontend
+# ============================================
+node_modules/
+.pnp/
+.pnp.js
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# ============================================
+# IDEs y editores
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Logs
+# ============================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Azure
+# ============================================
+.azure/
+
+# ============================================
+# Bases de datos locales (dev)
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# Archivos temporales del proyecto
+# ============================================
+tmp/
+temp/
+uploads/
+backend/data/
+
+# ============================================
+# Notas de trabajo locales (no versionar)
+# ============================================
+SPRINT2_FIXES.md

@@ -1,0 +1,372 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ──────────────────────────────────────── */
+:root {
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F5;
+  --surface-3: #E4E4E7;
+  --line: #E4E4E7;
+  --line-strong: #D4D4D8;
+  --ink: #18181B;
+  --ink-2: #3F3F46;
+  --ink-3: #71717A;
+  --ink-4: #A1A1AA;
+  --accent: #2563EB;
+  --accent-bg: #EFF6FF;
+  --accent-line: #BFDBFE;
+  --ok: #16A34A;
+  --ok-bg: #DCFCE7;
+  --warn: #D97706;
+  --warn-bg: #FEF3C7;
+  --err: #DC2626;
+  --err-bg: #FEE2E2;
+  --info: #6366F1;
+  --info-bg: #EEF2FF;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: -0.003em;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Typography design system (composite classes via @apply) ─ */
+@layer components {
+  .t-up {
+    @apply uppercase tracking-label text-10 font-semibold text-ink-3;
+  }
+  .t-medium { @apply font-medium; }
+  .t-bold   { @apply font-semibold; }
+  .t-mute   { @apply text-ink-3; }
+  .t-faint  { @apply text-ink-4; }
+  .t-sm     { @apply text-11; }
+  .t-xs     { @apply text-10; }
+  .t-md     { @apply text-13; }
+  .t-lg     { @apply text-14 font-medium; }
+  .t-xl     { @apply text-16 font-semibold tracking-tight2; }
+  .t-2xl    { @apply text-18 font-semibold tracking-tight3; }
+  .mono     { @apply font-mono; }
+  .tnum     { @apply tabular-nums; }
+  .ref {
+    @apply font-mono text-11 text-accent cursor-pointer whitespace-nowrap;
+  }
+  .ref:hover { @apply underline; }
+  .help     { @apply text-11 text-ink-3 leading-[1.4]; }
+}
+
+/* ─── App shell ──────────────────────────────────────────── */
+.appbar {
+  @apply flex items-center h-appbar border-b border-line bg-surface px-3 gap-3 shrink-0 z-10;
+}
+.appbar .brand {
+  @apply font-semibold text-13 tracking-tight2 pr-3 border-r border-line
+         flex items-center gap-2 h-full whitespace-nowrap;
+}
+.appbar .brand .mark {
+  @apply w-[18px] h-[18px] bg-ink text-surface font-mono text-10 font-bold
+         flex items-center justify-center rounded-sm shrink-0;
+}
+.appbar .crumbs {
+  @apply flex gap-[6px] items-center text-12 text-ink-3;
+}
+.appbar .crumbs .sep  { @apply text-ink-4; }
+.appbar .crumbs .now  { @apply text-ink; }
+.appbar .right { @apply ml-auto flex gap-2 items-center; }
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidenav {
+  @apply w-sidebar border-r border-line bg-surface flex flex-col p-2 gap-px shrink-0 overflow-y-auto;
+}
+.sidenav .section-label {
+  @apply text-10 uppercase tracking-label text-ink-4 px-2 pt-[10px] pb-1 font-semibold;
+}
+.sidenav .item {
+  @apply flex items-center px-2 py-[6px] text-12 text-ink-2 rounded cursor-pointer gap-2
+         no-underline select-none transition-colors duration-100;
+}
+.sidenav .item:hover  { @apply bg-surface-2; }
+.sidenav .item.active { @apply bg-surface-2 text-ink font-medium; }
+.sidenav .item .count { @apply ml-auto font-mono text-10 text-ink-3; }
+.sidenav .ic {
+  @apply w-[14px] h-[14px] border border-ink-3 rounded-sm shrink-0;
+}
+
+/* ─── Top nav tabs ───────────────────────────────────────── */
+.navbar {
+  @apply h-navbar border-b border-line bg-surface flex px-3 gap-[2px] items-stretch shrink-0;
+}
+.navbar .item {
+  @apply flex items-center px-3 text-12 text-ink-3
+         border-b-2 border-transparent -mb-px cursor-pointer whitespace-nowrap
+         select-none transition-colors duration-100;
+}
+.navbar .item:hover  { @apply text-ink-2; }
+.navbar .item.active { @apply text-ink border-b-accent font-medium; }
+.navbar .item .count {
+  @apply ml-[6px] bg-surface-2 px-[6px] py-px rounded-full text-10 text-ink-3 font-mono;
+}
+.navbar .item.active .count { @apply bg-accent-bg text-accent; }
+
+/* ─── Page areas ─────────────────────────────────────────── */
+.page      { @apply flex-1 overflow-auto p-4 bg-bg; }
+.page.flush { padding: 0; }
+.page.tight { @apply p-3; }
+
+/* ─── Surfaces ───────────────────────────────────────────── */
+.surface   { @apply bg-surface border border-line rounded; }
+.surface-2 { @apply bg-surface-2 border border-line rounded; }
+
+/* ─── Status bar ─────────────────────────────────────────── */
+.statusbar {
+  @apply h-statusbar border-t border-line bg-surface flex items-center
+         px-3 gap-4 text-11 text-ink-3 shrink-0;
+}
+.statusbar .sep { @apply text-line-strong; }
+
+/* ─── Toolbar ────────────────────────────────────────────── */
+.toolbar {
+  @apply flex items-center gap-2 px-3 py-2 bg-surface border-b border-line shrink-0 flex-wrap;
+}
+
+/* ─── Buttons ────────────────────────────────────────────── */
+.btn {
+  @apply inline-flex items-center gap-[6px] px-[10px]
+         font-sans text-12 font-medium bg-surface text-ink
+         border border-line-strong rounded cursor-pointer h-btn
+         whitespace-nowrap no-underline select-none transition-colors duration-100 shrink-0;
+}
+.btn:hover    { @apply bg-surface-2; }
+.btn:disabled { @apply opacity-50 cursor-not-allowed; }
+.btn.primary  { @apply bg-ink text-white border-ink; }
+.btn.primary:hover { @apply bg-ink-2; }
+.btn.accent   { @apply bg-accent text-white border-accent; }
+.btn.info-solid { @apply bg-info text-white border-info; }
+.btn.info-solid:hover { @apply bg-info; filter: brightness(0.9); }
+.btn.success-solid { @apply bg-ok text-white border-ok; }
+.btn.success-solid:hover { @apply bg-ok; filter: brightness(0.9); }
+.btn.warning-solid { @apply bg-warn text-white border-warn; }
+.btn.warning-solid:hover { @apply bg-warn; filter: brightness(0.9); }
+.btn.danger-solid { @apply bg-err text-white border-err; }
+.btn.danger-solid:hover { @apply bg-err; filter: brightness(0.9); }
+.btn.danger   { @apply text-err; }
+.btn.danger:hover { @apply bg-err-bg; }
+.btn.ghost    { @apply bg-transparent border-transparent text-ink-2; }
+.btn.ghost:hover  { @apply bg-surface-2; }
+.btn.sm { @apply h-btn-sm px-2 text-11; }
+.btn.lg { @apply h-btn-lg px-[14px] text-13; }
+
+/* ─── Keyboard hints ─────────────────────────────────────── */
+.kbd {
+  @apply inline-flex items-center font-mono text-10
+         border border-b-2 border-line-strong rounded-sm px-1 h-4
+         bg-surface text-ink-3;
+}
+
+/* ─── Form inputs ────────────────────────────────────────── */
+.input {
+  @apply flex items-center h-input px-[10px] border border-line-strong
+         rounded bg-surface text-12 text-ink font-sans gap-[6px];
+}
+.input:focus-within { @apply outline outline-2 outline-offset-[-1px] outline-accent; }
+.input input {
+  @apply border-0 outline-none bg-transparent text-12 text-ink font-sans flex-1 min-w-0;
+}
+.input input::placeholder { @apply text-ink-4; }
+.input.placeholder { @apply text-ink-4; }
+.input.lg          { @apply h-btn-lg; }
+.label {
+  @apply text-11 text-ink-3 mb-1 block font-medium;
+}
+.real-input {
+  @apply w-full h-input px-[10px] border border-line-strong rounded
+         bg-surface text-12 text-ink font-sans outline-none;
+}
+.real-input:focus { @apply outline outline-2 outline-offset-[-1px] outline-accent; }
+.real-input::placeholder { @apply text-ink-4; }
+
+/* ─── Status dots ────────────────────────────────────────── */
+.dot {
+  @apply w-[7px] h-[7px] rounded-full inline-block shrink-0;
+}
+.dot.ok   { @apply bg-ok; }
+.dot.warn { @apply bg-warn; }
+.dot.err  { @apply bg-err; }
+.dot.info { @apply bg-info; }
+.dot.idle { @apply bg-ink-4; }
+.dot.proc { background: var(--info); box-shadow: 0 0 0 3px var(--info-bg); }
+
+/* ─── Tags / chips ───────────────────────────────────────── */
+.tag {
+  @apply inline-flex items-center gap-[5px] px-[6px] py-px
+         text-11 bg-surface-2 text-ink-2 rounded-sm border border-line
+         whitespace-nowrap h-[18px] leading-none font-sans;
+}
+.tag.ok     { @apply bg-ok-bg text-ok border-transparent; }
+.tag.warn   { @apply bg-warn-bg text-warn border-transparent; }
+.tag.err    { @apply bg-err-bg text-err border-transparent; }
+.tag.info   { @apply bg-info-bg text-info border-transparent; }
+.tag.accent { @apply bg-accent-bg text-accent border-transparent; }
+.tag.mono   { @apply font-mono; }
+
+/* ─── Tables ─────────────────────────────────────────────── */
+.table { @apply w-full border-collapse text-12 bg-surface; }
+.table th {
+  @apply text-left font-medium text-11 text-ink-3 uppercase tracking-[0.04em]
+         px-3 py-2 border-b border-line bg-surface whitespace-nowrap sticky top-0 z-[1];
+}
+.table td { @apply px-3 py-2 border-b border-line align-middle; }
+.table tr:hover td   { @apply bg-surface-2; }
+.table tr.sel td     { @apply bg-accent-bg; }
+.table .num { @apply font-mono tabular-nums; }
+.table.compact td,
+.table.compact th { @apply px-[10px] py-[10px]; }
+
+/* ─── Doc icon ───────────────────────────────────────────── */
+.icn-doc {
+  @apply w-4 h-[18px] border border-ink-3 bg-surface relative shrink-0 rounded-[1px];
+}
+.icn-doc::after {
+  content: "";
+  @apply absolute top-1 left-[3px] right-[3px] h-px bg-ink-4;
+  box-shadow: 0 3px 0 var(--ink-4), 0 6px 0 var(--ink-4);
+}
+
+/* ─── Progress bar ───────────────────────────────────────── */
+.progress-track { @apply h-1 bg-surface-2 rounded-[1px] overflow-hidden; }
+.progress-fill  { @apply h-full bg-accent rounded-[1px] transition-[width] duration-300; }
+
+/* ─── Checkbox ───────────────────────────────────────────── */
+input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--line-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+/* ─── Tooltip ────────────────────────────────────────────── */
+[data-tooltip] { @apply relative; }
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  @apply absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2
+         bg-ink text-white text-11 px-2 py-1 rounded whitespace-nowrap z-[100] pointer-events-none;
+}
+
+/* ─── Focus ring ─────────────────────────────────────────── */
+:focus-visible { @apply outline outline-2 outline-offset-2 outline-accent; }
+
+/* ─── Horizontal divider ─────────────────────────────────── */
+.divider { @apply h-px bg-line my-2; }
+
+/* ─── Dropdown panel ─────────────────────────────────────── */
+.dropdown {
+  @apply absolute top-full left-0 mt-1 z-50 min-w-[160px]
+         bg-surface border border-line rounded overflow-hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.dropdown-item {
+  @apply px-3 py-[6px] text-12 cursor-pointer text-ink-2 transition-colors duration-100;
+}
+.dropdown-item:hover         { @apply bg-surface-2; }
+.dropdown-item.active        { @apply bg-accent-bg text-accent; }
+
+/* ─── Chat role label ─────────────────────────────────────── */
+@layer components {
+  .chat-role {
+    @apply w-7 text-10 uppercase tracking-label pt-0.5 shrink-0 font-mono;
+  }
+}
+
+/* ─── Markdown del chat (respuestas RAG) ──────────────────────
+   Estilado sobrio para el Markdown que devuelve el LLM. Tamaño y color
+   heredan del contenedor (text-13 / leading) para integrarse con la burbuja. */
+.chat-md > :first-child { margin-top: 0; }
+.chat-md > :last-child  { margin-bottom: 0; }
+
+.chat-md p { margin: 0 0 0.65em; }
+
+.chat-md ul,
+.chat-md ol { margin: 0 0 0.65em; padding-left: 1.4em; }
+.chat-md li { margin: 0.2em 0; }
+.chat-md ul { list-style: disc; }
+.chat-md ol { list-style: decimal; }
+
+.chat-md h1,
+.chat-md h2,
+.chat-md h3,
+.chat-md h4 {
+  margin: 1em 0 0.4em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.chat-md h1 { font-size: 1.15em; }
+.chat-md h2 { font-size: 1.08em; }
+.chat-md h3,
+.chat-md h4 { font-size: 1em; }
+
+.chat-md strong { font-weight: 600; color: var(--ink); }
+.chat-md em { font-style: italic; }
+
+.chat-md a { color: var(--accent); text-decoration: underline; }
+
+.chat-md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.05em 0.35em;
+}
+.chat-md pre {
+  margin: 0 0 0.65em;
+  padding: 0.75em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.chat-md pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+
+.chat-md blockquote {
+  margin: 0 0 0.65em;
+  padding-left: 0.9em;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-3);
+}
+
+.chat-md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 0.65em;
+  font-size: 0.95em;
+}
+.chat-md th,
+.chat-md td {
+  border: 1px solid var(--line);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+.chat-md th { background: var(--surface-2); font-weight: 600; }
+
+.chat-md hr { border: none; border-top: 1px solid var(--line); margin: 1em 0; }
+
+/* ─── Kbd inside primary button ──────────────────────────── */
+.btn.primary .kbd { @apply border-white/30 bg-transparent text-white/70; }
