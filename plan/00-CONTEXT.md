@@ -9,7 +9,7 @@ LicitAI: RAG platform for analyzing Spanish public tenders (pliegos PCAP/PPT →
 
 - **Commercial name: Pliexa** (decided 2026-07-04). "LicitAI" remains only as the TFM's public name on jorgepulgar.com. Phase FE applies the rebrand: all UI-facing copy uses **Pliexa**; where specs/tasks say `licitai` in resource names/tags (e.g. spec-2.2), substitute `pliexa` for new resources. Internal code identifiers may keep `licitai` until their rewrite touches them. Domain (pliexa.com/.es) + OEPM/EUIPO trademark checks pending — folded into the selling-gate lawyer consult. Never state publicly that Pliexa is "based on" the TFM code (undermines the rewrite/lineage-distance strategy); experience-based framing only.
 - **Business model (revised 2026-07-04 — two tiers, replaces dedicated-per-client default)**:
-  - **Standard tier**: ONE shared Azure environment runs all standard clients; per-client isolation at the data plane — dedicated AI Search index (Basic supports 15), dedicated blob container, dedicated DB schema, org-level filtering (spec-3.1 is the isolation backbone). Marginal infra cost ≈ €20–40/month/client.
+  - **Standard tier**: ONE shared Azure environment runs all standard clients; per-client isolation at the data plane — dedicated AI Search index per client (physical), dedicated blob container per client (physical), shared SQL DB with org_id filtering (spec-3.1 invariant). Full design: **spec-2.2b-shared-tier.md**. Marginal infra cost ≈ €20–40/month/client.
   - **Dedicated tier (premium)**: full per-client environment via Bicep (spec-2.2) at 2–3× monthly price — for bid-data-sensitive/compliance-driven buyers. Isolation is sold as a feature (bid data = competitive secrets).
   - **Build implication**: Phases 2/3 assume shared-by-default, dedicated-as-option. Bicep provisions both the shared env and dedicated envs (params distinguish them). Design multi-tenant now; don't retrofit.
   - Jorge provisions and maintains; clients operate self-service. Maintenance/SLA retainer revenue is independent of tier.
@@ -70,7 +70,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 - **Haiku 4.5**: mechanical single-file edits.
 
 **Specs (read the one for your task, it overrides the phase doc's shorter description):**
-`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
+`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · **`spec-2.2b-shared-tier.md` (2026-07-04 — two-tier amendment; read WITH 2.2 and 3.1)** · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
 
 Review pattern: implement from spec → review the diff **against the spec's checklist**, never against the old co-authored file.
 

@@ -1,6 +1,7 @@
 # Spec 3.1 — Organization model
 
 > Fable-written spec, 2026-07-02. Implementer: Opus 4.8. Review: checklist at end. Prereq: Alembic (2.4).
+> **AMENDED 2026-07-04 by `spec-2.2b-shared-tier.md`**: `organizations` gains tenant-registry columns (search_endpoint, search_index, storage_container, tier, quota) in one additional Alembic revision; index/container resolved from the org row at every call site. Everything else in this spec unchanged.
 > ♻ Full rewrites: `models/domain.py`, `models/schemas.py`, `endpoints/perfil.py`, `services/indexing.py`, remaining co-authored parts of `endpoints/licitaciones.py`.
 > Highest regression risk in the plan: isolation moves from user to org. Schema change — confirm migration with Jorge before applying.
 

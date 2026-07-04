@@ -2,6 +2,7 @@
 
 > Fable-written architecture, 2026-07-02. Implementer: Opus 4.8. Review checklist at end.
 > Goal: `az deployment sub create -f infra/bicep/main.bicep -p clients/<name>.bicepparam` → complete client env, zero portal steps.
+> **AMENDED 2026-07-04 by `spec-2.2b-shared-tier.md`** (two-tier model): this spec describes the dedicated tier; the shared standard tier adds an `envType` param and moves index/container creation to the admin CLI. Read both before implementing.
 
 ## 1. Layout
 
