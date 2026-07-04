@@ -4,11 +4,11 @@
 
 ## 5.1 PLACSP integration — L — Opus 4.8
 
-Paste a PLACSP expediente URL → backend fetches the pliego PDFs → auto-creates the licitación → pipeline indexes. Biggest wow-factor for the Spanish market.
-- Phase A: URL import (parse PLACSP detail page / its data endpoints, download PCAP+PPT+anexos).
-- Phase B (later): CPV-code watchlist per org + email alerts on new matching tenders.
+**Full design: `specs/spec-5.1-placsp.md`** (2026-07-04) — one parser core (`placsp_core`, lives in the Iatenea ops repo, vendored here at implementation time; already serving the GTM prospect DB), three consumers:
+- Phase A: URL import (allowlisted download of PCAP+PPT+anexos → auto-create licitación → pipeline). Biggest wow-factor for the Spanish market.
+- Phase B: Radar — per-org CPV/importe/geo watchlist, match-scored digests (capped + metered per spec-2.2b §5). The retention feature.
 
-**Acceptance:** URL in → indexed licitación out with zero manual uploads.
+**Acceptance:** URL in → indexed licitación out with zero manual uploads; Radar digest test per spec §6.
 
 ## 5.2 ♻ Analytics dashboard — M — Sonnet 5
 
