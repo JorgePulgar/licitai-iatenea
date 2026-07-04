@@ -47,7 +47,8 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 
 | # | Issue | Fixed by |
 |---|---|---|
-| 1 | Container-level SAS sent to browser — any user can touch any blob | 1.1 |
+| 1 | Container-level SAS sent to browser — any user can touch any blob | 1.1 (spec-1.1-sas.md) |
+| 1b | Client-supplied `blob_url` trusted; `download_pliego_bytes` accepts `file://` → local file read / cross-user blob read via pipeline | 1.1 (spec-1.1-sas.md §3.2–3.3) |
 | 2 | `GET /api/v1/system/audit` unauthenticated — leaks all users' data | 1.6 (**do first**) |
 | 3 | No rate limiting (login brute force, uncapped LLM bill) | 1.2 |
 | 4 | JWT in localStorage | CSP (1.3) → httpOnly cookie (Phase FE) |
@@ -57,12 +58,15 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 
 ## 4. Which Claude model per task
 
-- **Fable 5**: security design, auth, org/tenant data model, IaC architecture. Specs + diff reviews on critical tasks (1.1, 1.4, 2.2, 3.1, 4.1, FE.1).
-- **Opus 4.8**: complex implementation from clear spec (migrations, workers, auth flows, module rewrites).
+- **Fable 5**: no longer required — all Fable design work was front-loaded as specs in `plan/specs/` (2026-07-02 spec sprint), each ending with an Opus review checklist.
+- **Opus 4.8**: complex implementation from the specs (migrations, workers, auth flows, module rewrites) **and** diff reviews using each spec's checklist.
 - **Sonnet 5**: standard tasks (CRUD, UI, CI, docs). Default.
 - **Haiku 4.5**: mechanical single-file edits.
 
-Rewrite-task pattern: spec with Fable → implement with Opus/Sonnet → Fable reviews diff **against the spec, not the old file**.
+**Specs (read the one for your task, it overrides the phase doc's shorter description):**
+`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
+
+Review pattern: implement from spec → review the diff **against the spec's checklist**, never against the old co-authored file.
 
 ## 5. Phase order & status
 
