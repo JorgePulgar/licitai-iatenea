@@ -14,12 +14,13 @@
 
 Completes the `audit.py` replacement started in 1.6, now org-scoped: win rate (`estado`/`resultado`), pipeline volume, deadlines calendar, per-user activity (admin view). Backend aggregates + frontend page (new codebase). **Acceptance:** renders from real data; org isolation test.
 
-## 5.3 Model upgrade path — M — Sonnet 5
+## 5.3 Model upgrade path + eval harness — L — Opus 4.8 (judges/core) + Sonnet 5 (runner/CI)
 
 - Deployment names per env config (Bicep param → app setting), no hardcoded model constants (old code hardcodes `extraccion_datos_4o` etc. in services — clean these while touching).
-- Eval harness: extend `scripts/eval_rag.py` into a repeatable before/after report.
+- **Eval harness: full design in `specs/spec-5.3-eval.md`** (2026-07-04) — golden dataset, 7 metric suites (retrieval, answers, faithfulness, refusal, requirements recall, memoria quality, injection), LLM-judge with calibration, baseline + regression gating in CI, `--compare` for model swaps. Replaces `scripts/eval_rag.py` after parity.
+- **Sizing note**: the golden-dataset labeling (~2h/pliego, Jorge) can start any time — it's independent of code and the highest-leverage manual work in the plan.
 
-**Acceptance:** switching chat model = config change + eval report, no code edit.
+**Acceptance:** per spec §7 — switching chat model = config change + side-by-side eval report; prompt changes gated by the full suite.
 
 ## 5.4 Per-org usage report — M — Sonnet 5
 

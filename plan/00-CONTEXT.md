@@ -70,7 +70,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 - **Haiku 4.5**: mechanical single-file edits.
 
 **Specs (read the one for your task, it overrides the phase doc's shorter description):**
-`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · **`spec-2.2b-shared-tier.md` (2026-07-04 — two-tier amendment; read WITH 2.2 and 3.1)** · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · **`spec-5.1-placsp.md` (2026-07-04 — PLACSP data layer: URL import + Radar + GTM prospect DB)** · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
+`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · **`spec-2.2b-shared-tier.md` (2026-07-04 — two-tier amendment; read WITH 2.2 and 3.1)** · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · **`spec-5.1-placsp.md` (2026-07-04 — PLACSP data layer: URL import + Radar + GTM prospect DB)** · **`spec-5.3-eval.md` (2026-07-04 — eval harness: golden dataset, faithfulness/refusal/requirements/memoria suites, regression gating)** · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
 
 Review pattern: implement from spec → review the diff **against the spec's checklist**, never against the old co-authored file.
 
