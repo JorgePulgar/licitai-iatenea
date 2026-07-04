@@ -7,7 +7,13 @@
 
 LicitAI: RAG platform for analyzing Spanish public tenders (pliegos PCAP/PPT → OCR → Azure AI Search → chat with citations, requirements checklist, match score, technical proposal drafts). Forked from a TFM (`tfm-final` tag in the old `licitai` repo); being turned into a commercial product.
 
-- **Business model**: one dedicated Azure environment per client, provisioned and maintained by Jorge (that's the recurring revenue). Clients operate the app self-service.
+- **Commercial name: Pliexa** (decided 2026-07-04). "LicitAI" remains only as the TFM's public name on jorgepulgar.com. Phase FE applies the rebrand: all UI-facing copy uses **Pliexa**; where specs/tasks say `licitai` in resource names/tags (e.g. spec-2.2), substitute `pliexa` for new resources. Internal code identifiers may keep `licitai` until their rewrite touches them. Domain (pliexa.com/.es) + OEPM/EUIPO trademark checks pending — folded into the selling-gate lawyer consult. Never state publicly that Pliexa is "based on" the TFM code (undermines the rewrite/lineage-distance strategy); experience-based framing only.
+- **Business model (revised 2026-07-04 — two tiers, replaces dedicated-per-client default)**:
+  - **Standard tier**: ONE shared Azure environment runs all standard clients; per-client isolation at the data plane — dedicated AI Search index (Basic supports 15), dedicated blob container, dedicated DB schema, org-level filtering (spec-3.1 is the isolation backbone). Marginal infra cost ≈ €20–40/month/client.
+  - **Dedicated tier (premium)**: full per-client environment via Bicep (spec-2.2) at 2–3× monthly price — for bid-data-sensitive/compliance-driven buyers. Isolation is sold as a feature (bid data = competitive secrets).
+  - **Build implication**: Phases 2/3 assume shared-by-default, dedicated-as-option. Bicep provisions both the shared env and dedicated envs (params distinguish them). Design multi-tenant now; don't retrofit.
+  - Jorge provisions and maintains; clients operate self-service. Maintenance/SLA retainer revenue is independent of tier.
+- **Positioning**: private RAG over the client's own corpus + pliego answering/drafting — NOT tender discovery (Tendios/Gobierto own that space). EU data residency + isolation are the GDPR sales pitch.
 - **Stack**: FastAPI + SQLAlchemy + Azure SQL / React + Vite + TS + Tailwind / Azure OpenAI, AI Search, Document Intelligence, Blob, Key Vault, App Insights.
 - Project conventions: see `claude.md` at repo root (terminology §7, RAG rules §9, security §10, UI style §5).
 
@@ -82,4 +88,4 @@ Review pattern: implement from spec → review the diff **against the spec's che
 
 Order: **1.6 → Phase 1 → 2 → FE → 3 → 4 → 5.** Sizes: S ≤1 day, M 2–4 days, L 1–2 weeks.
 
-Per-client Azure fixed cost ≈ €100–150/month (AI Search Basic ~€70 dominates) + OpenAI/DI usage — price maintenance accordingly.
+Costs (revised 2026-07-04): dedicated env ≈ €100–150/month fixed (AI Search Basic ~€70 dominates) + OpenAI/DI usage; standard tier ≈ €20–40/month marginal per client on the shared env. Price by tier value, not by cost.

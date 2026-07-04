@@ -1,6 +1,7 @@
-# Phase 2 — Deployability (per-client Azure environments)
+# Phase 2 — Deployability (Azure environments, two-tier)
 
-> Prereq reading: `plan/00-CONTEXT.md`. This phase is the revenue engine: a repeatable, scripted client environment.
+> Prereq reading: `plan/00-CONTEXT.md`. This phase is the revenue engine: a repeatable, scripted environment.
+> **Two-tier update (2026-07-04)**: the Bicep stack (2.2) serves BOTH the single shared standard-tier env (all standard clients, isolated at the data plane per spec-3.1) and dedicated premium envs (one per client). Parameterize accordingly — env name is `shared` or a client name; per-client budgets/tags (2.6) apply per index/org on shared, per RG on dedicated.
 
 ## 2.1 Docker — M — Sonnet 5
 
@@ -55,6 +56,6 @@ Budget + alert (email) per client subscription/RG in Bicep; consistent resource 
 
 ---
 
-Reference: fixed cost per client env ≈ €100–150/month (Search Basic ~€70, SQL S0 ~€13, Container Apps ~€15–30, Storage ~€1) + OpenAI/DI usage.
+Reference: dedicated env fixed cost ≈ €100–150/month (Search Basic ~€70, SQL S0 ~€13, Container Apps ~€15–30, Storage ~€1) + OpenAI/DI usage. Standard tier: same stack once, ≈ €20–40/month marginal per additional client (index + container + schema + usage).
 
 Done when: a new client env can be created, deployed to, migrated, and cost-monitored without touching the Azure portal.

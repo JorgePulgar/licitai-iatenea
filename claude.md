@@ -7,7 +7,9 @@
 
 ## 1. Contexto del proyecto
 
-**LicitAI** es una plataforma RAG (Retrieval-Augmented Generation) para analizar licitaciones públicas españolas. Permite subir pliegos (PCAP, PPT), procesarlos con OCR, indexarlos y consultarlos con IA generativa.
+**Pliexa** (nombre comercial decidido 2026-07-04; nombre interno histórico: LicitAI) es una plataforma RAG (Retrieval-Augmented Generation) para analizar licitaciones públicas españolas. Permite subir pliegos (PCAP, PPT), procesarlos con OCR, indexarlos y consultarlos con IA generativa.
+
+> **Regla de naming**: todo texto de cara al usuario (UI, títulos, emails, docs de cliente) usa **Pliexa**. Los identificadores internos existentes (`LicitAIError`, nombres de módulos) pueden conservar `licitai` hasta que su rewrite los toque. Recursos Azure nuevos: `pliexa` en lugar de `licitai`. Ver `plan/00-CONTEXT.md` §1.
 
 **Funcionalidades principales:**
 1. **Explicación clara** del pliego: traduce lenguaje administrativo/jurídico a comprensible.
@@ -16,7 +18,7 @@
 4. **Chatbot RAG**: preguntas en lenguaje natural sobre el pliego con citas de página.
 5. **Match score**: puntuación de encaje pliego-empresa con justificación.
 
-**Naturaleza:** Producto comercial. Se despliega en un entorno Azure dedicado por cliente. El código debe ser profesional, mantenible y seguro.
+**Naturaleza:** Producto comercial con dos tiers de despliegue (decidido 2026-07-04): tier estándar en un entorno Azure compartido con aislamiento por cliente en la capa de datos (índice + contenedor + esquema dedicados, filtro de organización), y tier dedicado premium con entorno Azure propio por cliente. El código debe ser profesional, mantenible, seguro y multi-tenant desde el diseño. Ver `plan/00-CONTEXT.md` §1.
 
 **Origen:** Base técnica desarrollada inicialmente por Jorge Pulgar, Álvaro López y Siro Cornejo. Ver `docs/ADR/` para el historial de decisiones de arquitectura.
 

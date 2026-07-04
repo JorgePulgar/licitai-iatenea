@@ -14,7 +14,7 @@
 ## FE.1 ♻ Design system + skeleton — M — Fable 5
 
 - Vite + React 18 + TS strict + Tailwind. **pnpm only**: delete `bun.lock` + `package-lock.json`, keep single `pnpm-lock.yaml`.
-- New visual identity (this is the rebrand): neutral palette + one accent, per `claude.md` §5.
+- New visual identity (this is the rebrand): neutral palette + one accent, per `claude.md` §5. **Product name: Pliexa** (decided 2026-07-04) — all UI copy, titles, meta, and email templates say Pliexa; no LicitAI strings survive in the new SPA.
 - Base `ui/` library: Button, Input, Select, Card, Badge, Modal, Table, Skeleton, Toast — documented, used everywhere.
 - App shell (sidebar + topbar), router, auth context, protected routes.
 - API client split by domain (`services/auth.ts`, `licitaciones.ts`, `query.ts`, ...) with typed responses and central error handling.
