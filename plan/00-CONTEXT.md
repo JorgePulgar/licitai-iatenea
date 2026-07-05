@@ -70,7 +70,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 - **Haiku 4.5**: mechanical single-file edits.
 
 **Specs (read the one for your task, it overrides the phase doc's shorter description):**
-`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · **`spec-2.2b-shared-tier.md` (2026-07-04 — two-tier amendment; read WITH 2.2 and 3.1)** · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · **`spec-5.1-placsp.md` (2026-07-04 — PLACSP data layer: URL import + Radar + GTM prospect DB)** · **`spec-5.3-eval.md` (2026-07-04 — eval harness: golden dataset, faithfulness/refusal/requirements/memoria suites, regression gating)** · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
+`spec-1.1-sas.md` · `spec-1.4-config-mi.md` · `spec-2.2-bicep.md` · **`spec-2.2b-shared-tier.md` (2026-07-04 — two-tier amendment; read WITH 2.2 and 3.1)** · `spec-3.1-org-model.md` · `spec-4.1-queue.md` · **`spec-5.1-placsp.md` (2026-07-04 — PLACSP data layer: URL import + Radar + GTM prospect DB)** · **`spec-5.3-eval.md` (2026-07-04 — eval harness: golden dataset, faithfulness/refusal/requirements/memoria suites, regression gating)** · **`spec-demo-minimal.md` (2026-07-05 — DM milestone: earliest demo-safe build)** · **`spec-memoria-prompts.md` (2026-07-05 — flagship drafting prompts, ready-to-apply)** · `spec-fe-design.md` · `spec-auth-flows.md` (3.3/3.4) · `prompts-hardened.md` (task 1.8 — ready-to-apply prompt texts + injection tests).
 
 Review pattern: implement from spec → review the diff **against the spec's checklist**, never against the old co-authored file.
 
@@ -87,5 +87,7 @@ Review pattern: implement from spec → review the diff **against the spec's che
 | 5 — Differentiators | `phase-5-differentiators.md` | ☐ |
 
 Order: **1.6 → Phase 1 → 2 → FE → 3 → 4 → 5.** Sizes: S ≤1 day, M 2–4 days, L 1–2 weeks.
+
+**Demo-minimal milestone (2026-07-05, `specs/spec-demo-minimal.md`)**: an alternative early sequence (DM1–DM9 ≈ tasks 1.6, 1.7, 1.8, 5.5, 4.1♻-scope, 3.1-partial, FE-minimal 5 screens, memoria quality prompts, eval-lite) that produces a **demo-safe build** (demo path fully rewritten, old SPA deleted) months before the selling gate — enables Phase-B personalized demos. Selling gate unchanged. Memoria quality prompts: `specs/spec-memoria-prompts.md`.
 
 Costs (revised 2026-07-04): dedicated env ≈ €100–150/month fixed (AI Search Basic ~€70 dominates) + OpenAI/DI usage; standard tier ≈ €20–40/month marginal per client on the shared env. Price by tier value, not by cost.
