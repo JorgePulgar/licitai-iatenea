@@ -14,7 +14,7 @@ Demo choreography (see thinking-repo sales assets): upload THEIR pliego → chec
 
 | # | Work | Source task | Size | Done | Notes |
 |---|---|---|---|---|---|
-| DM1 | Audit endpoint fix | 1.6 | S | ☐ | already first in plan |
+| DM1 | Audit endpoint fix | 1.6 | S | ✅ 2026-07-05 | already first in plan |
 | DM2 | Query endpoint rewrite ♻ | 1.7 | S–M | ☐ | demo path, co-authored today |
 | DM3 | Hardened prompts applied | 1.8 | S | ☐ | texts ready in `prompts-hardened.md`; a hostile pliego must not wreck a live demo |
 | DM4 | Requirements + match rewrite ♻ | 5.5 pulled forward | M | ☐ | keep the spec'd improvements (asyncio.gather, page validation) — they're cheap and demo-visible (speed) |

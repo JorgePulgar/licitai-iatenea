@@ -1,212 +1,190 @@
 """
-Endpoint de auditoría del sistema.
+Auditoría del sistema — GET /api/v1/system/audit (solo administradores).
 
-Devuelve un snapshot con métricas generales: licitaciones, documentos,
-memorias, consultas IA, tokens consumidos y uso por usuario.
+Reescrito desde spec funcional (tarea 1.6, plan/phase-1-security.md):
+- Auth obligatoria: `require_admin` (401 sin credenciales, 403 sin rol admin).
+- Schemas de respuesta en `models/schemas.py` (contrato estable para el FE).
+- Agregados por usuario en queries agrupadas (número fijo de queries,
+  independiente del número de usuarios — sin N+1).
+- Alcance mínimo: snapshot global de uso. El dashboard completo llega en 5.2.
 """
 
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from sqlalchemy import func, case, distinct
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_admin
 from app.db.database import get_db
 from app.models.domain import (
-    Licitacion, Pliego, User, Query,
-    MemoriaDocument, MemoriaChatMessage, CompanyTemplate,
+    CompanyTemplate,
+    Licitacion,
+    MemoriaChatMessage,
+    MemoriaDocument,
+    Pliego,
+    Query,
+    User,
 )
+from app.models.schemas import (
+    AuditAIUsageStats,
+    AuditDocumentStats,
+    AuditLicitacionStats,
+    AuditMemoriaStats,
+    AuditResponse,
+    AuditUserActivity,
+    AuditUserStats,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-# ── Response schemas ─────────────────────────────────────────────────────────
-
-class LicitacionStats(BaseModel):
-    total: int
-    by_status: dict[str, int]
-    created_last_7d: int
-    created_last_30d: int
+def _count_since(column, cutoff: datetime):
+    """Cuenta filas con `column >= cutoff` dentro del mismo SELECT agregado."""
+    return func.coalesce(func.sum(case((column >= cutoff, 1), else_=0)), 0)
 
 
-class DocumentStats(BaseModel):
-    total_pliegos: int
-    total_pages: int
-    total_size_mb: float
-    by_type: dict[str, int]
-
-
-class MemoriaStats(BaseModel):
-    total_documents: int
-    total_chat_messages: int
-    total_templates: int
-
-
-class AIUsageStats(BaseModel):
-    total_queries: int
-    total_tokens_prompt: int
-    total_tokens_completion: int
-    total_tokens: int
-    avg_latency_ms: Optional[float]
-    queries_last_7d: int
-    queries_last_30d: int
-
-
-class UserStats(BaseModel):
-    total_users: int
-    active_users: int
-
-
-class UserActivity(BaseModel):
-    user_id: str
-    email: str
-    full_name: Optional[str]
-    licitaciones_count: int
-    queries_count: int
-    tokens_total: int
-
-
-class AuditResponse(BaseModel):
-    generated_at: str
-    licitaciones: LicitacionStats
-    documents: DocumentStats
-    memorias: MemoriaStats
-    ai_usage: AIUsageStats
-    users: UserStats
-    user_activity: list[UserActivity]
-
-
-# ── Endpoint ─────────────────────────────────────────────────────────────────
-
-@router.get("/audit", response_model=AuditResponse)
-def get_system_audit(db: Session = Depends(get_db)):
-    now = datetime.now(timezone.utc)
-    seven_days_ago = now - timedelta(days=7)
-    thirty_days_ago = now - timedelta(days=30)
-
-    # ── Licitaciones ─────────────────────────────────────────────────────
-    lic_total = db.query(func.count(Licitacion.id)).scalar() or 0
-    lic_by_status_rows = (
+def _licitacion_stats(
+    db: Session, since_7d: datetime, since_30d: datetime
+) -> AuditLicitacionStats:
+    total, last_7d, last_30d = db.query(
+        func.count(Licitacion.id),
+        _count_since(Licitacion.created_at, since_7d),
+        _count_since(Licitacion.created_at, since_30d),
+    ).one()
+    by_status = dict(
         db.query(Licitacion.status, func.count(Licitacion.id))
         .group_by(Licitacion.status)
         .all()
     )
-    lic_by_status = {row[0]: row[1] for row in lic_by_status_rows}
-    lic_7d = (
-        db.query(func.count(Licitacion.id))
-        .filter(Licitacion.created_at >= seven_days_ago)
-        .scalar() or 0
-    )
-    lic_30d = (
-        db.query(func.count(Licitacion.id))
-        .filter(Licitacion.created_at >= thirty_days_ago)
-        .scalar() or 0
+    return AuditLicitacionStats(
+        total=total,
+        by_status=by_status,
+        created_last_7d=last_7d,
+        created_last_30d=last_30d,
     )
 
-    # ── Documentos (pliegos) ─────────────────────────────────────────────
-    pliego_total = db.query(func.count(Pliego.id)).scalar() or 0
-    pliego_pages = db.query(func.coalesce(func.sum(Pliego.page_count), 0)).scalar() or 0
-    pliego_size = db.query(func.coalesce(func.sum(Pliego.size_bytes), 0)).scalar() or 0
-    pliego_by_type_rows = (
+
+def _document_stats(db: Session) -> AuditDocumentStats:
+    total, pages, size_bytes = db.query(
+        func.count(Pliego.id),
+        func.coalesce(func.sum(Pliego.page_count), 0),
+        func.coalesce(func.sum(Pliego.size_bytes), 0),
+    ).one()
+    by_type = dict(
         db.query(Pliego.document_type, func.count(Pliego.id))
         .group_by(Pliego.document_type)
         .all()
     )
-    pliego_by_type = {row[0]: row[1] for row in pliego_by_type_rows}
-
-    # ── Memorias ─────────────────────────────────────────────────────────
-    mem_docs = db.query(func.count(MemoriaDocument.id)).scalar() or 0
-    mem_chats = db.query(func.count(MemoriaChatMessage.id)).scalar() or 0
-    mem_templates = db.query(func.count(CompanyTemplate.id)).scalar() or 0
-
-    # ── AI / Queries ─────────────────────────────────────────────────────
-    q_total = db.query(func.count(Query.id)).scalar() or 0
-    q_tok_prompt = db.query(func.coalesce(func.sum(Query.tokens_prompt), 0)).scalar() or 0
-    q_tok_completion = db.query(func.coalesce(func.sum(Query.tokens_completion), 0)).scalar() or 0
-    q_avg_latency = db.query(func.avg(Query.latency_ms)).scalar()
-    q_7d = (
-        db.query(func.count(Query.id))
-        .filter(Query.created_at >= seven_days_ago)
-        .scalar() or 0
-    )
-    q_30d = (
-        db.query(func.count(Query.id))
-        .filter(Query.created_at >= thirty_days_ago)
-        .scalar() or 0
+    return AuditDocumentStats(
+        total_pliegos=total,
+        total_pages=pages,
+        total_size_mb=round(size_bytes / (1024 * 1024), 2),
+        by_type=by_type,
     )
 
-    # ── Users ────────────────────────────────────────────────────────────
-    u_total = db.query(func.count(User.id)).scalar() or 0
-    u_active = (
-        db.query(func.count(User.id))
-        .filter(User.is_active == True)  # noqa: E712
-        .scalar() or 0
+
+def _memoria_stats(db: Session) -> AuditMemoriaStats:
+    return AuditMemoriaStats(
+        total_documents=db.query(func.count(MemoriaDocument.id)).scalar() or 0,
+        total_chat_messages=db.query(func.count(MemoriaChatMessage.id)).scalar() or 0,
+        total_templates=db.query(func.count(CompanyTemplate.id)).scalar() or 0,
     )
 
-    # ── Per-user activity ────────────────────────────────────────────────
-    user_rows = db.query(User.id, User.email, User.full_name).all()
-    user_activity: list[UserActivity] = []
-    for uid, email, name in user_rows:
-        u_lic = (
-            db.query(func.count(Licitacion.id))
-            .filter(Licitacion.user_id == uid)
-            .scalar() or 0
+
+def _ai_usage_stats(
+    db: Session, since_7d: datetime, since_30d: datetime
+) -> AuditAIUsageStats:
+    total, tokens_prompt, tokens_completion, avg_latency, last_7d, last_30d = db.query(
+        func.count(Query.id),
+        func.coalesce(func.sum(Query.tokens_prompt), 0),
+        func.coalesce(func.sum(Query.tokens_completion), 0),
+        func.avg(Query.latency_ms),
+        _count_since(Query.created_at, since_7d),
+        _count_since(Query.created_at, since_30d),
+    ).one()
+    return AuditAIUsageStats(
+        total_queries=total,
+        total_tokens_prompt=tokens_prompt,
+        total_tokens_completion=tokens_completion,
+        total_tokens=tokens_prompt + tokens_completion,
+        avg_latency_ms=round(avg_latency, 1) if avg_latency is not None else None,
+        queries_last_7d=last_7d,
+        queries_last_30d=last_30d,
+    )
+
+
+def _user_stats(db: Session) -> AuditUserStats:
+    total, active = db.query(
+        func.count(User.id),
+        func.coalesce(
+            func.sum(case((User.is_active == True, 1), else_=0)), 0  # noqa: E712
+        ),
+    ).one()
+    return AuditUserStats(total_users=total, active_users=active)
+
+
+def _user_activity(db: Session) -> list[AuditUserActivity]:
+    """Actividad por usuario con dos queries agrupadas + una de usuarios (sin N+1)."""
+    licitaciones_by_user = dict(
+        db.query(Licitacion.user_id, func.count(Licitacion.id))
+        .group_by(Licitacion.user_id)
+        .all()
+    )
+    usage_by_user = {
+        user_id: (n_queries, tokens)
+        for user_id, n_queries, tokens in db.query(
+            Query.user_id,
+            func.count(Query.id),
+            func.coalesce(func.sum(Query.tokens_prompt), 0)
+            + func.coalesce(func.sum(Query.tokens_completion), 0),
         )
-        u_q = (
-            db.query(func.count(Query.id))
-            .filter(Query.user_id == uid)
-            .scalar() or 0
-        )
-        u_tok = (
-            db.query(
-                func.coalesce(func.sum(Query.tokens_prompt), 0)
-                + func.coalesce(func.sum(Query.tokens_completion), 0)
+        .group_by(Query.user_id)
+        .all()
+    }
+
+    activity: list[AuditUserActivity] = []
+    for user_id, email, full_name in (
+        db.query(User.id, User.email, User.full_name).order_by(User.email).all()
+    ):
+        n_queries, tokens = usage_by_user.get(user_id, (0, 0))
+        activity.append(
+            AuditUserActivity(
+                user_id=user_id,
+                email=email,
+                full_name=full_name,
+                licitaciones_count=licitaciones_by_user.get(user_id, 0),
+                queries_count=n_queries,
+                tokens_total=tokens,
             )
-            .filter(Query.user_id == uid)
-            .scalar() or 0
         )
-        user_activity.append(UserActivity(
-            user_id=uid,
-            email=email,
-            full_name=name,
-            licitaciones_count=u_lic,
-            queries_count=u_q,
-            tokens_total=u_tok,
-        ))
+    return activity
+
+
+@router.get("/audit", response_model=AuditResponse)
+def get_system_audit(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> AuditResponse:
+    """Snapshot global de uso del sistema. Requiere rol admin."""
+    now = datetime.now(timezone.utc)
+    since_7d = now - timedelta(days=7)
+    since_30d = now - timedelta(days=30)
+
+    logger.info(
+        "Auditoría de sistema generada",
+        extra={"admin_user_id": str(admin.id)},
+    )
 
     return AuditResponse(
-        generated_at=now.isoformat(),
-        licitaciones=LicitacionStats(
-            total=lic_total,
-            by_status=lic_by_status,
-            created_last_7d=lic_7d,
-            created_last_30d=lic_30d,
-        ),
-        documents=DocumentStats(
-            total_pliegos=pliego_total,
-            total_pages=pliego_pages,
-            total_size_mb=round(pliego_size / (1024 * 1024), 2),
-            by_type=pliego_by_type,
-        ),
-        memorias=MemoriaStats(
-            total_documents=mem_docs,
-            total_chat_messages=mem_chats,
-            total_templates=mem_templates,
-        ),
-        ai_usage=AIUsageStats(
-            total_queries=q_total,
-            total_tokens_prompt=q_tok_prompt,
-            total_tokens_completion=q_tok_completion,
-            total_tokens=q_tok_prompt + q_tok_completion,
-            avg_latency_ms=round(q_avg_latency, 1) if q_avg_latency else None,
-            queries_last_7d=q_7d,
-            queries_last_30d=q_30d,
-        ),
-        users=UserStats(
-            total_users=u_total,
-            active_users=u_active,
-        ),
-        user_activity=user_activity,
+        generated_at=now,
+        licitaciones=_licitacion_stats(db, since_7d, since_30d),
+        documents=_document_stats(db),
+        memorias=_memoria_stats(db),
+        ai_usage=_ai_usage_stats(db, since_7d, since_30d),
+        users=_user_stats(db),
+        user_activity=_user_activity(db),
     )

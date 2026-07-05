@@ -407,3 +407,60 @@ class MemoriaDocumentResponse(BaseModel):
 class MemoriaDocumentPatch(BaseModel):
     title: Optional[str] = None
     markdown: Optional[str] = None
+
+
+# ── Auditoría del sistema (solo admin, GET /system/audit) ─────────────────────
+# Contrato estable: el frontend (services/api.ts) consume estos nombres de campo.
+
+class AuditLicitacionStats(BaseModel):
+    total: int
+    by_status: dict[str, int]
+    created_last_7d: int
+    created_last_30d: int
+
+
+class AuditDocumentStats(BaseModel):
+    total_pliegos: int
+    total_pages: int
+    total_size_mb: float
+    by_type: dict[str, int]
+
+
+class AuditMemoriaStats(BaseModel):
+    total_documents: int
+    total_chat_messages: int
+    total_templates: int
+
+
+class AuditAIUsageStats(BaseModel):
+    total_queries: int
+    total_tokens_prompt: int
+    total_tokens_completion: int
+    total_tokens: int
+    avg_latency_ms: Optional[float] = None
+    queries_last_7d: int
+    queries_last_30d: int
+
+
+class AuditUserStats(BaseModel):
+    total_users: int
+    active_users: int
+
+
+class AuditUserActivity(BaseModel):
+    user_id: str
+    email: str
+    full_name: Optional[str] = None
+    licitaciones_count: int
+    queries_count: int
+    tokens_total: int
+
+
+class AuditResponse(BaseModel):
+    generated_at: datetime
+    licitaciones: AuditLicitacionStats
+    documents: AuditDocumentStats
+    memorias: AuditMemoriaStats
+    ai_usage: AuditAIUsageStats
+    users: AuditUserStats
+    user_activity: List[AuditUserActivity] = Field(default_factory=list)
