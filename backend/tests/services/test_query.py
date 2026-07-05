@@ -186,3 +186,32 @@ def test_generate_answer_without_history_is_stateless():
 
     roles = [m["role"] for m in fake.chat.completions.create.call_args.kwargs["messages"]]
     assert roles == ["system", "user"]
+
+
+def test_generate_answer_captures_token_usage():
+    """El usage del LLM se propaga en los campos internos del QueryResponse (1.7)."""
+    fake = _fake_llm("Respuesta [pcap p. 2].")
+    fake.chat.completions.create.return_value.usage = SimpleNamespace(
+        prompt_tokens=100, completion_tokens=30
+    )
+    with patch("app.services.query.get_openai_client", return_value=fake):
+        result = asyncio.run(
+            generate_answer("Pregunta", [_chunk("p1", "pcap", 2)], "lic-1", "Test")
+        )
+
+    assert result.tokens_prompt == 100
+    assert result.tokens_completion == 30
+    # exclude=True: nunca viajan en la serialización al cliente.
+    assert "tokens_prompt" not in result.model_dump()
+
+
+def test_generate_answer_without_usage_leaves_tokens_null():
+    """Cliente sin atributo usage (mocks, proveedores raros) → tokens NULL, sin crash."""
+    fake = _fake_llm("Respuesta [pcap p. 2].")
+    with patch("app.services.query.get_openai_client", return_value=fake):
+        result = asyncio.run(
+            generate_answer("Pregunta", [_chunk("p1", "pcap", 2)], "lic-1", "Test")
+        )
+
+    assert result.tokens_prompt is None
+    assert result.tokens_completion is None

@@ -160,6 +160,10 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     citations: List[Citation] = Field(default_factory=list)
+    # Telemetría interna del LLM (tarea 1.7). exclude=True: no se serializa nunca
+    # al cliente; el endpoint la persiste en la fila `Query` para el reporting de uso.
+    tokens_prompt: Optional[int] = Field(default=None, exclude=True)
+    tokens_completion: Optional[int] = Field(default=None, exclude=True)
 
 
 class QueryHistoryItem(BaseModel):

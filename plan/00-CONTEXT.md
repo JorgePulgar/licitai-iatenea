@@ -37,7 +37,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 | `services/memoria_export.py` | 5.6 | ☐ |
 | `endpoints/audit.py` | 1.6 (+5.2) | ✅ 2026-07-05 (rewrite 1.6; 5.2 lo extenderá) |
 | `endpoints/perfil.py` | 3.1 | ☐ |
-| `endpoints/query.py` | 1.7 | ☐ |
+| `endpoints/query.py` | 1.7 | ✅ 2026-07-05 |
 | `endpoints/licitaciones.py` | 1.1 + 3.1 | ☐ |
 | `services/memoria.py` + `endpoints/memoria.py` | 4.1 | ☐ |
 | `models/schemas.py` + `models/domain.py` | 3.1 | ☐ |

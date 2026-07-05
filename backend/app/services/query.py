@@ -338,12 +338,22 @@ async def generate_answer(
     try:
         response = await _call_llm()
         answer = response.choices[0].message.content or ""
+        # Telemetría de uso (tarea 1.7): se propaga en el QueryResponse (campos
+        # exclude=True, nunca serializados) para que el endpoint la persista.
+        usage = getattr(response, "usage", None)
+        tokens_prompt = getattr(usage, "prompt_tokens", None)
+        tokens_completion = getattr(usage, "completion_tokens", None)
         if _is_unanswerable(answer):
             logger.info(
                 f"LLM signalled no relevant info for licitacion {licitacion_id}. "
                 "Returning standard no-info response."
             )
-            return QueryResponse(answer=_NO_INFO_ANSWER, citations=[])
+            return QueryResponse(
+                answer=_NO_INFO_ANSWER,
+                citations=[],
+                tokens_prompt=tokens_prompt,
+                tokens_completion=tokens_completion,
+            )
     except RetryError as e:
         # exc_info=True → se registra como excepción en App Insights (LIC-101/103).
         logger.error(
@@ -372,7 +382,12 @@ async def generate_answer(
         for c in cited_chunks
     ]
 
-    return QueryResponse(answer=answer, citations=citations)
+    return QueryResponse(
+        answer=answer,
+        citations=citations,
+        tokens_prompt=tokens_prompt,
+        tokens_completion=tokens_completion,
+    )
 
 
 def validate_citations(
