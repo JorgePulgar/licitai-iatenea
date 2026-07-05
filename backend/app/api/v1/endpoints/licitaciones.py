@@ -359,6 +359,56 @@ async def get_requirements(
         title=licitacion.title,
         db=db,
         session_factory=SessionLocal,
+        page_counts=_page_counts_by_doc_type(db, licitacion.id),
+    )
+
+
+def _page_counts_by_doc_type(db: Session, licitacion_id: str) -> dict[str, int]:
+    """document_type (lower) → nº máximo de páginas conocido. Para validar que las
+    páginas citadas por el LLM existen en el documento origen (5.5)."""
+    counts: dict[str, int] = {}
+    rows = (
+        db.query(Pliego.document_type, Pliego.page_count)
+        .filter(Pliego.licitacion_id == licitacion_id, Pliego.page_count.isnot(None))
+        .all()
+    )
+    for doc_type, page_count in rows:
+        key = (doc_type or "").lower()
+        counts[key] = max(counts.get(key, 0), page_count)
+    return counts
+
+
+@router.post("/{licitacion_id}/requirements/regenerate", response_model=RequirementsListResponse)
+async def regenerate_requirements(
+    licitacion_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RequirementsListResponse:
+    """Invalida la cache de requisitos y los vuelve a extraer (5.5). Útil cuando los
+    documentos han cambiado (reindexado) o la extracción anterior fue pobre."""
+    licitacion = (
+        db.query(Licitacion)
+        .filter(Licitacion.id == licitacion_id, Licitacion.user_id == current_user.id)
+        .first()
+    )
+    if not licitacion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licitación no encontrada")
+
+    if licitacion.status not in ("indexed", "partial_error"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"La licitación no está indexada (estado actual: {licitacion.status})",
+        )
+
+    from app.services.requirements import extract_requirements, invalidate_requirements
+    invalidate_requirements(licitacion.id, db)
+    return await extract_requirements(
+        licitacion_id=licitacion.id,
+        user_id=current_user.id,
+        title=licitacion.title,
+        db=db,
+        session_factory=SessionLocal,
+        page_counts=_page_counts_by_doc_type(db, licitacion.id),
     )
 
 
@@ -469,6 +519,7 @@ async def match_score(
         title=licitacion.title,
         db=db,
         session_factory=SessionLocal,
+        page_counts=_page_counts_by_doc_type(db, licitacion.id),
     )
 
     result = await calculate_match(

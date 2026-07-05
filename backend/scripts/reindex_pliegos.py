@@ -68,6 +68,15 @@ async def reindex(licitacion_id: str | None = None) -> None:
                 print(f"    ✗ {pliego.id} ({pliego.filename}) — error: {e}")
 
         print(f"Done. {ok}/{len(pliegos)} pliego(s) reindexed.")
+
+        # Los requisitos cacheados se extrajeron de los chunks antiguos: quedan
+        # obsoletos al reindexar. Se invalidan para forzar re-extracción (5.5).
+        from app.services.requirements import invalidate_requirements
+
+        for lic_id in {p.licitacion_id for p in pliegos}:
+            deleted = invalidate_requirements(lic_id, db)
+            if deleted:
+                print(f"  Requisitos cacheados invalidados para {lic_id} ({deleted} filas).")
     finally:
         db.close()
 

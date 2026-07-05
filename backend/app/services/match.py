@@ -96,10 +96,12 @@ async def calculate_match(
             requisitos_evaluados=[],
         )
 
+    # Fencing anti-inyección (1.8): requisitos y perfil son texto no confiable;
+    # el prompt v1.0 trata el contenido de <requisitos>/<perfil> como datos.
     user_message = (
         f"Licitación: '{title}'\n\n"
-        f"Requisitos del pliego:\n{requirements_text}\n\n"
-        f"Perfil de empresa:\n{profile_text}"
+        f"<requisitos>\n{requirements_text}\n</requisitos>\n\n"
+        f"<perfil>\n{profile_text}\n</perfil>"
     )
 
     try:

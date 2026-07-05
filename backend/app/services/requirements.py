@@ -1,3 +1,19 @@
+"""
+Extracción de requisitos del pliego — reescrito desde spec funcional (tarea 5.5 / DM4).
+
+Contrato:
+- ``extract_requirements(...)`` → RequirementsListResponse. Cache-first sobre
+  ``pliego_requirements``; en frío: retrieval multi-query EN PARALELO
+  (``asyncio.gather`` acotado por semáforo, ~18 búsquedas secuenciales antes),
+  LLM (REQUIREMENTS_SYSTEM_PROMPT v1.0, JSON, chunks fenceados en <fragmentos>),
+  validación de salida (enum de categoría, páginas contra los page_counts reales,
+  dedup por descripción normalizada) y persistencia con sesión fresca.
+- ``invalidate_requirements(licitacion_id, db)`` → nº de filas borradas. Lo usan
+  el endpoint de regeneración y el reindexado (los requisitos cacheados quedan
+  obsoletos cuando cambian los documentos).
+"""
+
+import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
@@ -17,37 +33,43 @@ logger = get_logger(__name__)
 LLM_MODEL = "extraccion_datos_4o"
 LLM_TEMPERATURE = 0.2
 
-# Each query retrieves top_k chunks via semantic search.
-# With 18 queries × 15 top_k = up to 270 candidate chunks (deduplicated).
 RETRIEVAL_TOP_K = 15
 
-# Targeted queries that cover all requirement categories.
-# Each query is phrased as a QUESTION to maximize semantic match with
-# substantive content (not table of contents headings).
-_REQUIREMENTS_QUERIES = [
+# Búsquedas simultáneas máximas contra AI Search/embeddings (cuota TPM/RPM de Azure;
+# mismo criterio que el fan-out de memoria).
+SEARCH_CONCURRENCY = 6
+
+VALID_CATEGORIES = frozenset({"administrativo", "tecnico", "economico", "plazo"})
+VALID_DOC_TYPES = frozenset({"pcap", "ppt", "anexo"})
+_FALLBACK_CATEGORY = "tecnico"
+_FALLBACK_DOC_TYPE = "pcap"
+
+# Consultas de cobertura: una por familia de requisitos, formuladas como pregunta
+# para maximizar el match semántico con contenido sustantivo (no índices).
+_COVERAGE_QUERIES = [
     # Administrativo
-    "¿Cuál es el plazo de presentación de ofertas y qué documentación administrativa se requiere?",
-    "¿Qué garantía provisional o definitiva se exige y de qué porcentaje?",
-    "¿Se exige clasificación empresarial? ¿Qué grupo, subgrupo y categoría?",
-    "¿Se permite la subcontratación? ¿Qué límites tiene? ¿Se permiten UTEs?",
+    "¿Qué documentación administrativa debe presentar el licitador y en qué plazo?",
+    "¿Qué garantía definitiva o provisional se exige y qué porcentaje representa?",
+    "¿Se exige clasificación empresarial (grupo, subgrupo, categoría)?",
+    "¿Está permitida la subcontratación o la concurrencia en UTE y con qué condiciones?",
     # Solvencia técnica
-    "¿Qué experiencia mínima en contratos similares se requiere? ¿Importe y años?",
-    "¿Qué equipo técnico mínimo se exige? ¿Perfiles, titulación, experiencia?",
-    "¿Qué certificaciones son obligatorias? ¿ISO, ENS, otras?",
-    "¿Qué medios materiales o infraestructura técnica se exigen?",
+    "¿Qué experiencia previa en contratos de objeto similar se exige acreditar?",
+    "¿Qué composición mínima del equipo de trabajo se exige (perfiles, titulaciones)?",
+    "¿Qué certificados o normas son de obligado cumplimiento (ISO, ENS, seguridad)?",
+    "¿Qué medios materiales, instalaciones o infraestructura debe aportar el adjudicatario?",
     # Solvencia económica
-    "¿Cuál es la cifra de negocio mínima exigida? ¿Qué seguro de responsabilidad civil se requiere?",
+    "¿Qué volumen anual de negocio mínimo y qué seguros se exigen al licitador?",
     # Técnico / PPT
-    "¿Cuáles son las prestaciones obligatorias del servicio? ¿Qué hay que hacer exactamente?",
-    "¿Qué niveles de servicio SLA se exigen? ¿Disponibilidad, tiempos de respuesta?",
-    "¿Qué penalizaciones hay por incumplimiento? ¿Importes o porcentajes de deducción?",
-    "¿Qué entregables o documentación se deben presentar? ¿Plan de trabajo, memorias?",
-    "¿Cuál es el plazo de ejecución del contrato? ¿Hitos, fases, cronograma?",
-    # Criterios de adjudicación
-    "¿Cuáles son los criterios de adjudicación y su puntuación máxima?",
-    "¿Qué criterios son de juicio de valor? ¿Memoria técnica, metodología, mejoras?",
-    "¿Cuál es la fórmula de valoración del precio? ¿Criterios automáticos?",
-    "¿Cuál es el presupuesto base de licitación? ¿Valor estimado del contrato?",
+    "¿Qué prestaciones y trabajos concretos componen el objeto del contrato?",
+    "¿Qué acuerdos de nivel de servicio, disponibilidad o tiempos de respuesta se exigen?",
+    "¿Qué penalidades se aplican por incumplimiento y cómo se calculan?",
+    "¿Qué entregables, informes o documentación debe producir el adjudicatario?",
+    "¿Cuál es el plazo de ejecución y qué hitos o fases contempla?",
+    # Criterios de adjudicación y económicos
+    "¿Cómo se puntúan las ofertas: criterios de adjudicación y ponderaciones?",
+    "¿Qué criterios dependen de juicio de valor (memoria técnica, metodología)?",
+    "¿Cuál es la fórmula de valoración de la oferta económica?",
+    "¿Cuál es el presupuesto base de licitación y el valor estimado del contrato?",
 ]
 
 
@@ -57,84 +79,128 @@ async def extract_requirements(
     title: str,
     db: Session,
     session_factory: Callable[[], Session] | None = None,
+    page_counts: dict[str, int] | None = None,
 ) -> RequirementsListResponse:
-    """
-    Extracts requirements from a licitacion's documents via LLM.
-    Uses multi-query semantic search to gather diverse, high-quality chunks
-    from across the full document, then sends them to the LLM.
+    """Extrae y persiste los requisitos de la licitación (cache-first).
 
-    The DB session passed in ``db`` is used only for the initial cache check.
-    A **fresh** session (from ``session_factory``) is opened right before
-    persisting results, so that the connection isn't held open during the
-    long-running search + LLM call (which can take minutes and cause the
-    SQL Server TCP connection to go stale).
+    ``db`` se usa solo para leer la cache; la escritura abre una sesión fresca de
+    ``session_factory`` porque la conexión original puede caducar durante el
+    retrieval + LLM (minutos, SQL Server corta el TCP). ``page_counts`` mapea
+    document_type→nº de páginas reales y permite descartar citas de página
+    imposibles (confianza en citas, claude.md §8).
     """
-    existing = (
+    cached = (
         db.query(PliegoRequirement)
         .filter(PliegoRequirement.licitacion_id == licitacion_id)
         .all()
     )
-    if existing:
+    if cached:
         return RequirementsListResponse(
             licitacion_id=licitacion_id,
-            requirements=[_to_response(r) for r in existing],
+            requirements=[_to_response(r) for r in cached],
             cached=True,
-            generated_at=existing[0].generated_at,
+            generated_at=cached[0].generated_at,
         )
 
-    # Multi-query semantic search: each query targets a different category
-    # of requirements to maximize coverage across the full document.
-    seen_ids: set[str] = set()
-    all_chunks: list[dict[str, Any]] = []
-
-    for q in _REQUIREMENTS_QUERIES:
-        results = await hybrid_search(q, licitacion_id, user_id, top_k=RETRIEVAL_TOP_K)
-        for chunk in results:
-            cid = chunk.get("chunk_id") or chunk.get("text", "")[:80]
-            if cid not in seen_ids:
-                seen_ids.add(cid)
-                all_chunks.append(chunk)
-
-    if not all_chunks:
-        logger.warning(f"No chunks found for requirements of licitacion {licitacion_id}.")
+    chunks = await _retrieve_coverage_chunks(licitacion_id, user_id)
+    if not chunks:
+        logger.warning(f"Sin chunks para requisitos de la licitación {licitacion_id}.")
         return RequirementsListResponse(
-            licitacion_id=licitacion_id,
-            requirements=[],
-            cached=False,
+            licitacion_id=licitacion_id, requirements=[], cached=False
         )
 
-    # Sort by document type then page for coherent reading order
-    all_chunks.sort(key=lambda c: (c.get("document_type", ""), c.get("page_number") or 0))
+    raw_items = await _ask_llm(chunks, title, licitacion_id)
 
-    # Log stats
-    text_lengths = [len(c.get("text", "")) for c in all_chunks]
-    distinct_pages = len(set(
-        (c.get("document_type", ""), c.get("page_number"))
-        for c in all_chunks
-    ))
+    now = datetime.now(timezone.utc)
+    records = _validate_and_dedup(raw_items, licitacion_id, page_counts or {}, now)
+    # Las respuestas se construyen ANTES de persistir: tras el commit los objetos
+    # quedan expirados y desligados de la sesión fresca (que se cierra).
+    responses = [_to_response(r) for r in records]
+
+    _persist(records, db, session_factory)
+
     logger.info(
-        f"Requirements retrieval: {len(all_chunks)} unique chunks from "
-        f"{distinct_pages} distinct pages. "
-        f"Text: min={min(text_lengths)}, max={max(text_lengths)}, "
-        f"avg={sum(text_lengths) // len(text_lengths)}, "
-        f"total={sum(text_lengths)} chars. "
-        f"Licitacion: {licitacion_id}"
+        f"Requisitos extraídos para {licitacion_id}: "
+        f"{len(raw_items)} crudos → {len(records)} únicos y validados."
+    )
+    return RequirementsListResponse(
+        licitacion_id=licitacion_id,
+        requirements=responses,
+        cached=False,
+        generated_at=now,
     )
 
-    # Build context in reading order
-    context = "\n\n".join(
-        f"[{c.get('document_type', '')} p. {c.get('page_number', '?')}] {c['text']}"
-        for c in all_chunks
+
+def invalidate_requirements(licitacion_id: str, db: Session) -> int:
+    """Borra la cache de requisitos (regeneración manual o cambio de documentos)."""
+    deleted = (
+        db.query(PliegoRequirement)
+        .filter(PliegoRequirement.licitacion_id == licitacion_id)
+        .delete()
+    )
+    db.commit()
+    if deleted:
+        logger.info(f"Cache de requisitos invalidada para {licitacion_id}: {deleted} filas.")
+    return deleted
+
+
+# ── Retrieval ────────────────────────────────────────────────────────────────
+
+
+async def _retrieve_coverage_chunks(
+    licitacion_id: str, user_id: str
+) -> list[dict[str, Any]]:
+    """Lanza las consultas de cobertura en paralelo y deduplica los chunks.
+
+    Antes: ~18 búsquedas secuenciales (una espera de red tras otra). Ahora:
+    ``asyncio.gather`` acotado por semáforo → latencia ≈ la de la búsqueda más
+    lenta por ola (aceptación 5.5: ≤ ~1/10 de la latencia anterior).
+    """
+    semaphore = asyncio.Semaphore(SEARCH_CONCURRENCY)
+
+    async def bounded_search(query: str) -> list[dict[str, Any]]:
+        async with semaphore:
+            return await hybrid_search(
+                query, licitacion_id, user_id, top_k=RETRIEVAL_TOP_K
+            )
+
+    results = await asyncio.gather(
+        *(bounded_search(q) for q in _COVERAGE_QUERIES)
     )
 
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for batch in results:
+        for chunk in batch:
+            key = chunk.get("chunk_id") or chunk.get("text", "")[:80]
+            if key not in seen:
+                seen.add(key)
+                unique.append(chunk)
+
+    # Orden de lectura (documento, página) para un contexto coherente.
+    unique.sort(key=lambda c: (c.get("document_type", ""), c.get("page_number") or 0))
+    return unique
+
+
+# ── LLM ──────────────────────────────────────────────────────────────────────
+
+
+async def _ask_llm(
+    chunks: list[dict[str, Any]], title: str, licitacion_id: str
+) -> list[dict[str, Any]]:
     client = get_openai_client()
     if not client:
-        logger.warning("Azure OpenAI not configured — requirements extraction unavailable.")
-        return RequirementsListResponse(
-            licitacion_id=licitacion_id,
-            requirements=[],
-            cached=False,
-        )
+        logger.warning("Azure OpenAI no configurado — extracción de requisitos no disponible.")
+        return []
+
+    context = "\n\n".join(
+        f"[{c.get('document_type', '')} p. {c.get('page_number', '?')}] {c['text']}"
+        for c in chunks
+    )
+    # Fencing anti-inyección (1.8): los chunks son texto no confiable.
+    user_message = (
+        f"Licitación: '{title}'\n\n<fragmentos>\n{context}\n</fragmentos>"
+    )
 
     try:
         response = await client.chat.completions.create(
@@ -143,60 +209,114 @@ async def extract_requirements(
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": REQUIREMENTS_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Licitación: '{title}'\n\nFragmentos del pliego ({len(all_chunks)} fragmentos):\n\n{context}"},
+                {"role": "user", "content": user_message},
             ],
         )
         raw = response.choices[0].message.content or "{}"
-        finish_reason = response.choices[0].finish_reason
-
         logger.info(
-            f"LLM response: context={len(context)} chars, "
-            f"finish_reason={finish_reason}, response_len={len(raw)}"
+            "Respuesta LLM de requisitos recibida",
+            extra={
+                "licitacion_id": licitacion_id,
+                "context_chars": len(context),
+                "finish_reason": response.choices[0].finish_reason,
+            },
         )
-
         data = json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.error(f"LLM returned invalid JSON: {e}. Raw: {raw[:300]}")
+        logger.error(f"JSON inválido del LLM en requisitos de {licitacion_id}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Error extracting requirements for licitacion {licitacion_id}: {e}")
+        logger.error(f"Error extrayendo requisitos de {licitacion_id}: {e}")
         raise
 
-    now = datetime.now(timezone.utc)
-    raw_requirements = data.get("requisitos", [])
+    items = data.get("requisitos", [])
+    return items if isinstance(items, list) else []
 
-    # Deduplicate by normalized description
-    seen_descs: set[str] = set()
-    db_records: list[PliegoRequirement] = []
-    response_items: list[RequirementResponse] = []
 
-    for req in raw_requirements:
-        desc = req.get("descripcion", "").strip()
-        key = " ".join(desc.lower().split())
-        if not key or key in seen_descs:
+# ── Validación y persistencia ────────────────────────────────────────────────
+
+
+def _validate_and_dedup(
+    raw_items: list[dict[str, Any]],
+    licitacion_id: str,
+    page_counts: dict[str, int],
+    now: datetime,
+) -> list[PliegoRequirement]:
+    """Aplica el contrato de salida: enum de categoría/documento, página verificada
+    contra el nº real de páginas del documento origen, dedup por descripción."""
+    seen_descriptions: set[str] = set()
+    records: list[PliegoRequirement] = []
+
+    for item in raw_items:
+        if not isinstance(item, dict):
             continue
-        seen_descs.add(key)
+        description = str(item.get("descripcion") or "").strip()
+        dedup_key = " ".join(description.lower().split())
+        if not dedup_key or dedup_key in seen_descriptions:
+            continue
+        seen_descriptions.add(dedup_key)
 
-        record = PliegoRequirement(
-            id=str(uuid.uuid4()),
-            licitacion_id=licitacion_id,
-            categoria=req.get("categoria", "tecnico"),
-            descripcion=desc,
-            pagina=req.get("pagina"),
-            documento_origen=req.get("documento_origen", "pcap"),
-            es_obligatorio=req.get("es_obligatorio", True),
-            generated_at=now,
+        category = str(item.get("categoria") or "").strip().lower()
+        if category not in VALID_CATEGORIES:
+            logger.warning(
+                f"Categoría fuera de enum ('{category}') en {licitacion_id}; "
+                f"se normaliza a '{_FALLBACK_CATEGORY}'."
+            )
+            category = _FALLBACK_CATEGORY
+
+        doc_type = str(item.get("documento_origen") or "").strip().lower()
+        if doc_type not in VALID_DOC_TYPES:
+            doc_type = _FALLBACK_DOC_TYPE
+
+        records.append(
+            PliegoRequirement(
+                id=str(uuid.uuid4()),
+                licitacion_id=licitacion_id,
+                categoria=category,
+                descripcion=description,
+                pagina=_validated_page(item.get("pagina"), doc_type, page_counts, licitacion_id),
+                documento_origen=doc_type,
+                es_obligatorio=bool(item.get("es_obligatorio", True)),
+                generated_at=now,
+            )
         )
-        db_records.append(record)
-        response_items.append(_to_response(record))
+    return records
 
-    # Persist with a FRESH session to avoid stale TCP connections.
-    # The original session has been idle during search + LLM (potentially
-    # minutes), so SQL Server may have dropped the underlying connection.
+
+def _validated_page(
+    raw_page: Any,
+    doc_type: str,
+    page_counts: dict[str, int],
+    licitacion_id: str,
+) -> int | None:
+    """Página citada → None si no es un entero positivo o excede las páginas reales
+    del documento origen. Mejor sin cita que con una cita falsa (claude.md §8)."""
+    try:
+        page = int(raw_page)
+    except (TypeError, ValueError):
+        return None
+    if page < 1:
+        return None
+    max_pages = page_counts.get(doc_type)
+    if max_pages is not None and page > max_pages:
+        logger.warning(
+            f"Página citada imposible en {licitacion_id}: {doc_type} p. {page} "
+            f"(el documento tiene {max_pages}); se descarta la cita."
+        )
+        return None
+    return page
+
+
+def _persist(
+    records: list[PliegoRequirement],
+    db: Session,
+    session_factory: Callable[[], Session] | None,
+) -> None:
+    """Escribe con sesión fresca: la original lleva minutos ociosa (búsqueda + LLM)
+    y SQL Server puede haber cortado la conexión."""
     write_db = session_factory() if session_factory else db
     try:
-        for record in db_records:
-            write_db.add(record)
+        write_db.add_all(records)
         write_db.commit()
     except Exception:
         write_db.rollback()
@@ -204,18 +324,6 @@ async def extract_requirements(
     finally:
         if write_db is not db:
             write_db.close()
-
-    logger.info(
-        f"Extracted {len(raw_requirements)} raw → {len(db_records)} unique requirements "
-        f"for licitacion {licitacion_id}."
-    )
-
-    return RequirementsListResponse(
-        licitacion_id=licitacion_id,
-        requirements=response_items,
-        cached=False,
-        generated_at=now,
-    )
 
 
 def _to_response(record: PliegoRequirement) -> RequirementResponse:
