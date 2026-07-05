@@ -61,7 +61,9 @@ async def generate_summary(licitacion_id: str, user_id: str, title: str) -> Summ
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Licitación: '{title}'\n\nFragmentos:\n\n{context}"},
+                # Fencing anti-inyección (1.8): el prompt v2.0 trata el contenido de
+                # <fragmentos> como datos no confiables, nunca como instrucciones.
+                {"role": "user", "content": f"Licitación: '{title}'\n\n<fragmentos>\n{context}\n</fragmentos>"},
             ],
         )
         raw = response.choices[0].message.content or "{}"

@@ -1,5 +1,11 @@
 # Deuda técnica
 
+### 2026-07-05 — Suite de inyección live (1.8) pendiente de ejecutar contra el entorno real
+- **Qué:** Los 4 tests live de `tests/services/test_prompt_injection.py` (casos 1-4 de prompts-hardened.md §5 contra el LLM real) están escritos y gateados con `RUN_INJECTION_LIVE=1`, pero **aún no se han ejecutado nunca**: esta máquina no tiene `backend/.env` con credenciales Azure.
+- **Por qué:** La capa offline (fencing, invariantes de prompt, esquema blindado) sí corre en cada suite; la resistencia real del modelo a la inyección solo se puede observar con llamadas reales.
+- **Impacto:** La aceptación del hito demo-minimal (§7.5: "Injection suite (1.8) passes against the live demo env") queda abierta. Riesgo: una demo con un pliego hostil sin haber validado el blindaje en vivo.
+- **Propuesta:** En la máquina con `.env`: `RUN_INJECTION_LIVE=1 pytest tests/services/test_prompt_injection.py` y registrar el output (fecha + resultado) aquí y en el PR. Coste: 4 llamadas LLM. Repetir tras cualquier cambio de prompt.
+
 ### 2026-06-23 — El paginador del editor de Memoria es una aproximación independiente del PDF
 - **Qué:** El editor (`PaginationGuides` en `RichDocumentEditor.tsx`) simula la paginación midiendo bloques en px y empujándolos con `margin-top`; el PDF lo genera WeasyPrint con layout real (`memoria_export.py`). Son dos motores distintos: aunque ahora el editor ya no acumula drift (badge y contenido caen exactos sobre su propia rejilla), su **partición de páginas puede no coincidir al 100% con la del PDF** (fuentes px↔pt, métricas de línea, colapso de márgenes). Además, el **salto de página manual** (`pageBreak`) sigue usando un spacer con altura, que rompe el margin-collapsing → reintroduce ~pocos px de drift por cada salto manual (los automáticos ya no).
 - **Por qué:** Unificar editor y export contra un mismo motor (p. ej. paged.js como vista previa fiel, ya existe `PaginatedMarkdown` + `memoriaPaged.css` espejo del CSS de WeasyPrint) es un cambio de alcance/UX mayor; se priorizó arreglar el drift de raíz en los saltos automáticos (la queja real) con cambio acotado.

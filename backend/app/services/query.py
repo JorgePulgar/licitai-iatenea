@@ -313,7 +313,12 @@ async def generate_answer(
         )
 
     context = _build_context(chunks)
-    user_message = f"Pregunta: {question}\n\nFragmentos de la licitación:\n{context}"
+    # Fencing anti-inyección (1.8): los chunks son texto no confiable; el prompt v2.0
+    # instruye a tratar todo lo que haya dentro de <fragmentos> como datos, no órdenes.
+    user_message = (
+        f"Pregunta: {question}\n\n"
+        f"<fragmentos>\n{context}\n</fragmentos>"
+    )
     # Intercala los turnos previos (pregunta del usuario + respuesta del asistente) entre
     # el system prompt y la pregunta actual, para que el LLM mantenga el hilo de la
     # conversación (preguntas de seguimiento del tipo "¿y eso cuánto cuesta?").
