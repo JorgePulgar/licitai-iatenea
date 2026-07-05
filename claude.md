@@ -1,7 +1,15 @@
-# claude.md — Reglas para trabajar en LicitAI
+# claude.md — Reglas para trabajar en Pliexa (repo: licitai-iatenea)
 
 > Este archivo es la fuente de verdad para cualquier asistente IA que trabaje en el proyecto.
 > Se actualiza al final de cada conversación si emerge una convención nueva.
+
+## 0. Bootstrap de cada sesión de desarrollo (LEER PRIMERO)
+
+1. Lee `plan/00-CONTEXT.md` entero (reglas IP de reescritura ♻, findings de seguridad, modelo de negocio two-tier, estado de fases).
+2. **Hito activo: demo-minimal** — `plan/specs/spec-demo-minimal.md` (DM1→DM9). Siguiente tarea: la primera DM sin marcar. DM1 = tarea 1.6 (endpoint de auditoría sin autenticación).
+3. Lee SOLO el doc de fase y la spec de tu tarea (los specs mandan sobre la descripción corta de la fase).
+4. Regla ♻ innegociable: los ficheros del inventario (00-CONTEXT §2) se REEMPLAZAN desde spec funcional, nunca se refactorizan.
+5. Nota de nombres: la carpeta local puede llamarse `pliexa`; el remoto GitHub sigue siendo `JorgePulgar/licitai-iatenea`. Producto = Pliexa (reglas de naming más abajo).
 
 ---
 

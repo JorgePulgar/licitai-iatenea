@@ -1,7 +1,8 @@
 # LicitAI Commercial — Development Context
 
 > **Read this first in every session, then read ONLY the phase doc you're working on** (`plan/phase-*.md`).
-> Private repo `licitai-iatenea`. This plan must never reach the TFM repo shared with Integra.
+> Private repo `licitai-iatenea` (local folder may be named `pliexa` — same repo, GitHub remote unchanged). This plan must never reach the TFM repo shared with Integra.
+> **ACTIVE MILESTONE (decided 2026-07-05): demo-minimal** — `specs/spec-demo-minimal.md`, DM1→DM9. Development starts at DM1 (= task 1.6). The phase order below remains the map for everything after the milestone.
 
 ## 1. What this is
 

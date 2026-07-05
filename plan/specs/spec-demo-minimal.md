@@ -50,7 +50,7 @@ DM completes these rewrite-inventory rows: `endpoints/query.py`, `services/requi
 - Week 5–7: DM5 + DM8
 - Week 7–10: DM7 (the long pole; start design-system skeleton in week 5 in parallel if energy allows)
 - Week 10–11: DM9 + dry-run demos ×2 on fixture pliegos
-- **Target: first live Phase-B demo ~week 12.** If calendar says otherwise, cut DM stretch items, never add.
+- **Target: first live Phase-B demo ~week 12 — best case.** Red-team R2-H2: weeks 1–6 collide with validation calls, job interviews, possibly a new job starting (velocity halves), and DM9 hides ~6 h of golden-set labeling plus building the judge runner (an M on its own). **Realistic range: 16–20 weeks. Recalibrate after DM1–DM3 actuals; cut scope, never slip dates silently.**
 
 ## 7. Acceptance
 
