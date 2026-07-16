@@ -39,7 +39,7 @@ def get_openai_client()                   # AsyncAzureOpenAI with azure_ad_token
 
 ### 2.3 `services/embeddings.py` rewrite
 
-- Uses `get_openai_client()`; batching (≤100/call) and tenacity retry (exponential, retry on 429/5xx/timeouts, max ~5 attempts) — behavior per claude.md §9.
+- Uses `get_openai_client()`; batching (≤100/call) and tenacity retry (exponential, retry on 429/5xx/timeouts, max ~5 attempts) — behavior per CLAUDE.md §9.
 - All other services migrate to the client factory in their own rewrite tasks; until then they keep working because key settings remain supported.
 
 ## 3. RBAC roles the Bicep must grant the backend/worker identity (input to 2.2)

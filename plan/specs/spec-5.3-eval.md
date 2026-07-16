@@ -2,7 +2,7 @@
 
 > Fable-written spec, 2026-07-04. Implementer: Opus 4.8 (judge prompts, harness core), Sonnet 5 (runner plumbing, CI). Review checklist at end.
 > Extends task 5.3 and replaces the ad-hoc `scripts/eval_rag.py` (keep it until parity). Current script measures **traceability only** (answered + cited pages exist). This spec adds correctness, faithfulness, refusal, requirements recall, memoria quality, injection resistance — and makes them a **regression gate**: every prompt/model/retrieval change runs against a fixed baseline and fails on regression.
-> Commercial stake: "sin cita, sin afirmación" is the sales promise (claude.md §8) — this harness is what makes it a measured number instead of a slogan. Publishable metrics feed the sales page.
+> Commercial stake: "sin cita, sin afirmación" is the sales promise (CLAUDE.md §8) — this harness is what makes it a measured number instead of a slogan. Publishable metrics feed the sales page.
 
 ## 1. Golden dataset (the one manual investment)
 
@@ -29,7 +29,7 @@
 
 ## 3. Judge design (the part that goes wrong silently)
 
-- Judge model: `chat-heavy` deployment (quality matters; volume is small). Judge prompts live in `eval/judges/*.py`, **versioned like product prompts** (claude.md §8).
+- Judge model: `chat-heavy` deployment (quality matters; volume is small). Judge prompts live in `eval/judges/*.py`, **versioned like product prompts** (CLAUDE.md §8).
 - Judge output: verdict + one-line rationale, JSON-forced. Rationales stored in the report (auditable).
 - **Calibration**: first run → Jorge reviews [30] random judge verdicts; disagreement >10% → fix rubric before trusting the harness. Re-calibrate on judge-prompt or judge-model change.
 - A judge change **invalidates baselines** (scores not comparable) → re-baseline, never mix.

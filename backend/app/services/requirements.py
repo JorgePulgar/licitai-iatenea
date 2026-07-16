@@ -87,7 +87,7 @@ async def extract_requirements(
     ``session_factory`` porque la conexión original puede caducar durante el
     retrieval + LLM (minutos, SQL Server corta el TCP). ``page_counts`` mapea
     document_type→nº de páginas reales y permite descartar citas de página
-    imposibles (confianza en citas, claude.md §8).
+    imposibles (confianza en citas, CLAUDE.md §8).
     """
     cached = (
         db.query(PliegoRequirement)
@@ -290,7 +290,7 @@ def _validated_page(
     licitacion_id: str,
 ) -> int | None:
     """Página citada → None si no es un entero positivo o excede las páginas reales
-    del documento origen. Mejor sin cita que con una cita falsa (claude.md §8)."""
+    del documento origen. Mejor sin cita que con una cita falsa (CLAUDE.md §8)."""
     try:
         page = int(raw_page)
     except (TypeError, ValueError):

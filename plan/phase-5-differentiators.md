@@ -31,7 +31,7 @@ Monthly usage per org: queries, tokens (persisted since 1.7), documents processe
 Replaces `services/requirements.py`, `prompts/requirements.py`, `prompts/match.py`. Improvements to spec in:
 - **Parallel retrieval**: the old code runs 18 hybrid searches sequentially — `asyncio.gather` them (~18× latency win).
 - Regenerate/invalidate: `POST /requirements/regenerate` + auto-invalidate cache when documents change (old cache is stale forever).
-- Validate extracted `pagina` against real page counts (citation trust, claude.md §8).
+- Validate extracted `pagina` against real page counts (citation trust, CLAUDE.md §8).
 - Enforced category enum + `es_obligatorio` with confidence, dedup kept.
 - Runs on the 4.1 worker if long.
 

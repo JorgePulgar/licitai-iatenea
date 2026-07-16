@@ -30,7 +30,7 @@ licitai/
 
 | Documento | Descripción |
 |---|---|
-| [`CLAUDE.md`](claude.md) | Convenciones de desarrollo |
+| [`CLAUDE.md`](CLAUDE.md) | Convenciones de desarrollo |
 | [`docs/ADR/`](docs/ADR/) | Decisiones de arquitectura |
 | [`docs/rag-design.md`](docs/rag-design.md) | Diseño del pipeline RAG |
 | [`COMMERCIALIZATION_PLAN.md`](COMMERCIALIZATION_PLAN.md) | Plan de comercialización (privado, no distribuir) |

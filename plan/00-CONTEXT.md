@@ -16,7 +16,7 @@ LicitAI: RAG platform for analyzing Spanish public tenders (pliegos PCAP/PPT →
   - Jorge provisions and maintains; clients operate self-service. Maintenance/SLA retainer revenue is independent of tier.
 - **Positioning**: private RAG over the client's own corpus + pliego answering/drafting — NOT tender discovery (Tendios/Gobierto own that space). EU data residency + isolation are the GDPR sales pitch.
 - **Stack**: FastAPI + SQLAlchemy + Azure SQL / React + Vite + TS + Tailwind / Azure OpenAI, AI Search, Document Intelligence, Blob, Key Vault, App Insights.
-- Project conventions: see `claude.md` at repo root (terminology §7, RAG rules §9, security §10, UI style §5).
+- Project conventions: see `CLAUDE.md` at repo root (terminology §7, RAG rules §9, security §10, UI style §5).
 
 ## 2. IP rewrite strategy (applies to every task marked ♻)
 

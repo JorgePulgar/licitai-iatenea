@@ -1,6 +1,6 @@
 # 1.8 — Hardened system prompts (deliverable, not a spec)
 
-> Fable-written, 2026-07-02. These are the NEW prompt texts. Apply: QUERY/SUMMARY replace Jorge's current versions (task: any Phase 1 session, needs Jorge's OK per claude.md §14.7). REQUIREMENTS/TEMPLATE-SUMMARY prompts are written fresh here for the 5.5 / 3.2b rewrites (do NOT read the old Siro prompt files — these replace them clean-room).
+> Fable-written, 2026-07-02. These are the NEW prompt texts. Apply: QUERY/SUMMARY replace Jorge's current versions (task: any Phase 1 session, needs Jorge's OK per CLAUDE.md §14.7). REQUIREMENTS/TEMPLATE-SUMMARY prompts are written fresh here for the 5.5 / 3.2b rewrites (do NOT read the old Siro prompt files — these replace them clean-room).
 > Threat model: pliego/template text is attacker-controllable input (a rigged PDF can contain instructions). Mitigations: delimiter fencing, instruction-priority rules, output-format lockdown, injection tests below. Residual risk documented in §5.
 
 ## 1. `QUERY_SYSTEM_PROMPT` → v2.0
@@ -163,7 +163,7 @@ Residual risk (document in GDPR/security notes): a model can still be confused b
 ## Opus review checklist (when applying)
 
 - [ ] Services fence untrusted text in `<fragmentos>`/`<documento>` exactly where prompts assume.
-- [ ] Version headers + changelog comments per claude.md §8 present in the `.py` files.
+- [ ] Version headers + changelog comments per CLAUDE.md §8 present in the `.py` files.
 - [ ] JSON contracts unchanged where consumers exist (summary schema, requirements keys).
 - [ ] Injection test file added; all 6 cases pass against the live dev deployment at least once (record output in PR).
 - [ ] Old Siro prompt files deleted in their respective rewrite tasks; nobody copied their text (these fresh versions are the replacement).

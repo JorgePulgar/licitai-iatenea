@@ -1,6 +1,6 @@
 # Phase FE — Frontend rebuild (full rewrite + rebrand)
 
-> Prereq reading: `plan/00-CONTEXT.md` §2 (rewrite rules) and `claude.md` §5 (UI style rules — sober, Linear/Notion-like, responsive, no AI-look).
+> Prereq reading: `plan/00-CONTEXT.md` §2 (rewrite rules) and `CLAUDE.md` §5 (UI style rules — sober, Linear/Notion-like, responsive, no AI-look).
 > The entire current `frontend/src/` is co-authored (~96% Siro) → **complete rewrite from functional specs, never porting files**. Old code may be *run* to observe behavior for spec-writing, but not copied.
 > **Status:** no tasks done yet (2026-07-05). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. Note: **DM7 builds FE-minimal** (5 screens, strict subset of this phase, old SPA deleted at its merge — see `specs/spec-demo-minimal.md` §3) — when DM7 is ticked, this phase = extend FE-minimal to parity, not start from zero.
 
@@ -15,7 +15,7 @@
 ## FE.1 ♻ Design system + skeleton — M — Fable 5
 
 - Vite + React 18 + TS strict + Tailwind. **pnpm only**: delete `bun.lock` + `package-lock.json`, keep single `pnpm-lock.yaml`.
-- New visual identity (this is the rebrand): neutral palette + one accent, per `claude.md` §5. **Product name: Pliexa** (decided 2026-07-04) — all UI copy, titles, meta, and email templates say Pliexa; no LicitAI strings survive in the new SPA.
+- New visual identity (this is the rebrand): neutral palette + one accent, per `CLAUDE.md` §5. **Product name: Pliexa** (decided 2026-07-04) — all UI copy, titles, meta, and email templates say Pliexa; no LicitAI strings survive in the new SPA.
 - Base `ui/` library: Button, Input, Select, Card, Badge, Modal, Table, Skeleton, Toast — documented, used everywhere.
 - App shell (sidebar + topbar), router, auth context, protected routes.
 - API client split by domain (`services/auth.ts`, `licitaciones.ts`, `query.ts`, ...) with typed responses and central error handling.

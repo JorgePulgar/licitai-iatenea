@@ -9,7 +9,7 @@
 
 - Stack: Vite + React 18 + TypeScript strict + Tailwind. **pnpm only** — delete `bun.lock`, `package-lock.json` at the start (needs Jorge's file-deletion OK, flagged here once).
 - Design tokens as CSS variables consumed by Tailwind config (`--color-bg`, `--color-surface`, `--color-ink-1/2/3`, `--color-line`, `--color-accent`, `--color-danger/warn/ok`), light theme only v1.
-- Identity (rebrand): neutral gray scale + ONE accent (recommend a desaturated indigo/steel blue ≠ old `#2563EB`), radius 2–4px, no shadows heavier than `shadow-sm`, Inter + JetBrains Mono (self-hosted via fontsource, not Google CDN — GDPR nicety). All claude.md §5 rules apply (density, no AI-look, responsive).
+- Identity (rebrand): neutral gray scale + ONE accent (recommend a desaturated indigo/steel blue ≠ old `#2563EB`), radius 2–4px, no shadows heavier than `shadow-sm`, Inter + JetBrains Mono (self-hosted via fontsource, not Google CDN — GDPR nicety). All CLAUDE.md §5 rules apply (density, no AI-look, responsive).
 
 ### A2. `components/ui/` (the base library — everything uses these)
 

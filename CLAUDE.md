@@ -1,4 +1,4 @@
-# claude.md — Reglas para trabajar en Pliexa (repo: licitai-iatenea)
+# CLAUDE.md — Reglas para trabajar en Pliexa (repo: licitai-iatenea)
 
 > Este archivo es la fuente de verdad para cualquier asistente IA que trabaje en el proyecto.
 > Se actualiza al final de cada conversación si emerge una convención nueva.
@@ -469,7 +469,7 @@ Si durante la conversación ha emergido:
 - Una preferencia del equipo
 - Un patrón que debe seguirse
 
-Actualiza este `claude.md` para que persista.
+Actualiza este `CLAUDE.md` para que persista.
 
 ---
 

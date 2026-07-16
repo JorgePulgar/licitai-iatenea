@@ -1,6 +1,6 @@
 # Spec MP — Memoria drafting prompt suite (quality)
 
-> Fable-written, 2026-07-05. Complements `prompts-hardened.md` (security) — this spec covers QUALITY of the flagship feature. Applied at DM8 (spec-demo-minimal) and measured by eval suite S6 (spec-5.3). Prompts in Spanish (product language), stored per claude.md §8 (versioned constants in `backend/app/prompts/memoria.py`). Temperatures: esquema 0.2 · drafting 0.5 · refine 0.4 · coherence 0.2.
+> Fable-written, 2026-07-05. Complements `prompts-hardened.md` (security) — this spec covers QUALITY of the flagship feature. Applied at DM8 (spec-demo-minimal) and measured by eval suite S6 (spec-5.3). Prompts in Spanish (product language), stored per CLAUDE.md §8 (versioned constants in `backend/app/prompts/memoria.py`). Temperatures: esquema 0.2 · drafting 0.5 · refine 0.4 · coherence 0.2.
 > **The one rule that sells the product**: the draft NEVER invents company capabilities. Anything not present in the corpus/profile becomes an explicit gap marker `[COMPLETAR: …]`. A draft that flags its gaps is trustworthy; a draft that fills them is a liability. This is also exactly what eval S6's fabrication check measures.
 
 ## 1. Esquema extraction — `MEMORIA_ESQUEMA_PROMPT` (v2)
