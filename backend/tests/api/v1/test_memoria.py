@@ -5,6 +5,7 @@ histórico, export PDF, lectura de documento, CRUD de secciones, aislamiento
 per-usuario y derive_template.
 """
 import json
+import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -106,14 +107,17 @@ def _create_memoria(client: TestClient, markdown: str = "# Memoria\n\nContenido.
     return response.json()
 
 
-# ── Fase 1: esquema ───────────────────────────────────────────────────────────
+# ── Fase 1: esquema (JSON v2, spec-memoria-prompts §1) ───────────────────────
 
-def test_esquema_proposes_sections(client_a):
+def test_esquema_extracts_structure_from_v2_json(client_a):
     fake = _fake_openai_json({
-        "reply": "He propuesto 2 secciones.",
-        "secciones": [
-            {"title": "Plan de trabajo", "max_puntos": 40, "sort_order": 0},
-            {"title": "Equipo", "sort_order": 1},
+        "estructura_impuesta": True,
+        "limite_total_paginas": 40,
+        "apartados": [
+            {"numero": "1", "titulo": "Plan de trabajo", "criterio": "Metodología",
+             "peso": "40 puntos", "limite": "10 páginas", "fuente_pagina": 12},
+            {"numero": "2", "titulo": "Equipo", "criterio": None,
+             "peso": None, "limite": None, "fuente_pagina": None},
         ],
     })
     with patch("app.services.memoria.get_openai_client", return_value=fake), \
@@ -122,29 +126,44 @@ def test_esquema_proposes_sections(client_a):
                           json={"message": "Propón las secciones"})
     assert r.status_code == 200
     data = r.json()
-    assert data["reply"] == "He propuesto 2 secciones."
-    assert [s["title"] for s in data["esquema"]] == ["Plan de trabajo", "Equipo"]
+    # Mapeo v2 → contrato del producto: numeración en el título, peso/límite numéricos.
+    assert [s["title"] for s in data["esquema"]] == ["1. Plan de trabajo", "2. Equipo"]
+    first = data["esquema"][0]
+    assert first["criterio_adjudicacion"] == "Metodología"
+    assert first["max_puntos"] == 40.0
+    assert first["page_budget"] == 10
+    assert "[p. 12]" in first["description"]
+    # El reply se construye en código (el JSON v2 no lo trae).
+    assert "estructura" in data["reply"].lower()
+    assert "40" in data["reply"]  # límite total de páginas
     # El esquema no persiste secciones ni historial de chat.
     assert client_a.get("/api/v1/licitaciones/lic-a/memoria/sections").json() == []
     assert client_a.get("/api/v1/licitaciones/lic-a/memoria/chat").json() == []
 
 
-def test_esquema_uses_extracted_criterios_for_grounding(client_a, db):
+def test_esquema_grounding_fenced_and_uses_extracted_criterios(client_a, db):
     db.add(PliegoRequirement(
         id="req-1", licitacion_id="lic-a", categoria="criterio_adjudicacion",
         descripcion="Memoria técnica — máximo 50 puntos (juicio de valor)",
         pagina=12, documento_origen="pcap", es_obligatorio=False, generated_at=_NOW,
     ))
     db.commit()
-    fake = _fake_openai_json({"reply": "ok", "secciones": [{"title": "Memoria técnica", "sort_order": 0}]})
+    fake = _fake_openai_json({"estructura_impuesta": False, "apartados": [
+        {"numero": None, "titulo": "Memoria técnica"},
+    ]})
     search_mock = AsyncMock(return_value=[])
     with patch("app.services.memoria.get_openai_client", return_value=fake), \
          patch("app.services.memoria.hybrid_search", new=search_mock):
         r = client_a.post("/api/v1/licitaciones/lic-a/memoria/esquema", json={"message": "go"})
     assert r.status_code == 200
-    search_mock.assert_not_called()  # con criterios extraídos no cae al fallback
+    # Con criterios ya extraídos solo se busca la estructura en el PPT (1 llamada,
+    # sin fallback de criterios sobre el PCAP).
+    assert search_mock.call_count == 1
+    assert search_mock.call_args.kwargs.get("document_type") == "ppt"
+    # Los criterios van al LLM DENTRO del fence (datos no confiables, 1.8).
     sent = fake.chat.completions.create.call_args.kwargs["messages"][1]["content"]
-    assert "máximo 50 puntos" in sent
+    fenced = sent.split("<fragmentos_pliego>")[1].split("</fragmentos_pliego>")[0]
+    assert "máximo 50 puntos" in fenced
 
 
 def test_esquema_isolation(client_a):
@@ -182,21 +201,30 @@ def test_propuesta_isolation(client_a):
 
 # ── Fase 2b: redacción multi-agente (fan-out) ─────────────────────────────────
 
+_SECTION_TITLE_RE = re.compile(r'Redacta el apartado "([^"]+)"')
+
+# Rasgo distintivo del prompt de sección v2 formateado (spec-MP §2).
+_SECTION_PROMPT_MARK = "redactor senior de memorias técnicas"
+
+
+def _section_title_from_system(system: str) -> str:
+    return _SECTION_TITLE_RE.search(system).group(1)
+
+
 def _fake_openai_router(section_fn, intro_text="Introducción global de la memoria."):
     """
     Cliente OpenAI falso que enruta por system prompt:
-      - agente de sección      → section_fn(user_message)
-      - agente de introducción → intro_text
+      - agente de sección (prompt v2 formateado) → section_fn(system_formateado)
+      - agente de introducción                   → intro_text
     Permite distinguir las llamadas de fan-out de la de introducción. El cosido del
     documento es determinista en código (no pasa por el LLM).
     """
-    from app.prompts.memoria import MEMORIA_INTRO_PROMPT, MEMORIA_SECTION_PROMPT
+    from app.prompts.memoria import MEMORIA_INTRO_PROMPT
 
     def create(*, messages, **kwargs):
         system = messages[0]["content"]
-        user = messages[-1]["content"]
-        if system == MEMORIA_SECTION_PROMPT:
-            content = section_fn(user)
+        if _SECTION_PROMPT_MARK in system:
+            content = section_fn(system)
         elif system == MEMORIA_INTRO_PROMPT:
             content = intro_text
         else:
@@ -214,12 +242,11 @@ def _system_prompts_used(fake) -> list[str]:
 
 def test_propuesta_fans_out_one_agent_per_section_then_stitches(client_a):
     """N secciones → N agentes de sección + 1 agente de introducción; cosido determinista."""
-    from app.prompts.memoria import MEMORIA_INTRO_PROMPT, MEMORIA_SECTION_PROMPT
+    from app.prompts.memoria import MEMORIA_INTRO_PROMPT
 
-    def section_fn(user):
+    def section_fn(system):
         # Devuelve el título recibido para verificar el routing por sección.
-        line = next(l for l in user.splitlines() if l.startswith("Título de la sección:"))
-        title = line.split(":", 1)[1].strip()
+        title = _section_title_from_system(system)
         return f"## {title}\n\nCuerpo de {title}."
 
     fake = _fake_openai_router(section_fn, intro_text="Introducción de la memoria.")
@@ -235,7 +262,7 @@ def test_propuesta_fans_out_one_agent_per_section_then_stitches(client_a):
     assert r.status_code == 200
     # 2 agentes de sección + 1 de introducción (el cosido NO usa LLM).
     systems = _system_prompts_used(fake)
-    assert systems.count(MEMORIA_SECTION_PROMPT) == 2
+    assert sum(1 for s in systems if _SECTION_PROMPT_MARK in s) == 2
     assert systems.count(MEMORIA_INTRO_PROMPT) == 1
     # El documento cose, verbatim y en orden, las secciones bajo el título y la intro.
     md = r.json()["markdown"]
@@ -264,9 +291,8 @@ def test_section_agent_receives_only_its_relevant_requisitos(client_a, db):
 
     captured: dict[str, str] = {}
 
-    def section_fn(user):
-        line = next(l for l in user.splitlines() if l.startswith("Título de la sección:"))
-        captured[line.split(":", 1)[1].strip()] = user
+    def section_fn(system):
+        captured[_section_title_from_system(system)] = system
         return "## x\n\nbody"
 
     fake = _fake_openai_router(section_fn)
@@ -288,14 +314,13 @@ def test_section_agent_receives_only_its_relevant_requisitos(client_a, db):
 
 def test_propuesta_degrades_failed_section_without_aborting(client_a):
     """Si un agente de sección falla, se degrada con marcador y el documento se produce igual."""
-    from app.prompts.memoria import MEMORIA_INTRO_PROMPT, MEMORIA_SECTION_PROMPT
+    from app.prompts.memoria import MEMORIA_INTRO_PROMPT
     from app.services.memoria import SECTION_FAILURE_MARKER
 
     def create(*, messages, **kwargs):
         system = messages[0]["content"]
-        user = messages[-1]["content"]
-        if system == MEMORIA_SECTION_PROMPT:
-            if "Título de la sección: Equipo" in user:
+        if _SECTION_PROMPT_MARK in system:
+            if _section_title_from_system(system) == "Equipo":
                 raise RuntimeError("LLM 500")
             content = "## Plan de trabajo\n\nBien."
         elif system == MEMORIA_INTRO_PROMPT:
@@ -329,8 +354,8 @@ def test_section_markdown_is_normalized_for_consistent_rendering(client_a):
     nivel 1 a nivel 2 y garantiza un único «#» de documento. Así todas las secciones
     quedan con la misma jerarquía y el Markdown se interpreta bien.
     """
-    def section_fn(user):
-        if "Título de la sección: Equipo" in user:
+    def section_fn(system):
+        if _section_title_from_system(system) == "Equipo":
             # Agente que envuelve TODO en un fence ```markdown (rompería el render).
             return "```markdown\n## Equipo\n\n**Perfiles** del equipo.\n```"
         # Agente que usa un nivel 1 (#) en vez de 2.
@@ -604,33 +629,34 @@ def test_isolation_cannot_delete_other_users_section(client_a, db):
     assert r.status_code == 404
 
 
-# ── derive_template (servicio) ────────────────────────────────────────────────
+# ── Coherencia (spec-MP §4) ─────────────────────────────────────────────
 
-def test_recurring_titles_only_own_user_and_excludes_current(db, users_and_licitaciones):
-    from app.services.memoria import recurring_titles
-    db.add(Licitacion(id="lic-a2", user_id="user-a", title="A2", status="indexed",
-                      created_at=_NOW, updated_at=_NOW))
-    db.add_all([
-        _section("s1", "lic-a2", "user-a", "Metodología", order=0),
-        _section("s2", "lic-a2", "user-a", "Equipo", order=1),
-        _section("s3", "lic-a", "user-a", "Actual", order=0),
-        _section("s4", "lic-b", "user-b", "De B", order=0),
-    ])
-    db.commit()
-    titles = recurring_titles("user-a", exclude_licitacion_id="lic-a", db=db)
-    assert "Metodología" in titles
-    assert "Equipo" in titles
-    assert "Actual" not in titles
-    assert "De B" not in titles
+def test_coherencia_returns_issue_list(client_a):
+    created = _create_memoria(client_a)
+    client_a.patch(
+        f"/api/v1/licitaciones/lic-a/memoria/documents/{created['doc_id']}",
+        json={"markdown": "# Memoria\n\n## Plan\n\n[COMPLETAR: cifra]."},
+    )
+    fake = _fake_openai_json({"incidencias": [
+        {"tipo": "completar_pendiente", "apartado": "Plan", "detalle": "[COMPLETAR: cifra]"},
+        {"tipo": "verificar", "apartado": "Plan", "detalle": "Afirmación sin respaldo"},
+        {"malformada": True},
+    ]})
+    with patch("app.services.memoria.get_openai_client", return_value=fake):
+        r = client_a.post(
+            f"/api/v1/licitaciones/lic-a/memoria/documents/{created['doc_id']}/coherencia"
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["doc_id"] == created["doc_id"]
+    # Las entradas malformadas se descartan; el resto conserva tipo/apartado/detalle.
+    assert [i["tipo"] for i in data["incidencias"]] == ["completar_pendiente", "verificar"]
+    # El borrador viaja al LLM fenceado como datos (<borrador>).
+    sent = fake.chat.completions.create.call_args.kwargs["messages"][1]["content"]
+    assert sent.startswith("<borrador>")
+    assert "[COMPLETAR: cifra]" in sent
 
 
-def test_recurring_titles_ranks_by_frequency(db, users_and_licitaciones):
-    from app.services.memoria import recurring_titles
-    for i, lic in enumerate(["lic-a2", "lic-a3"]):
-        db.add(Licitacion(id=lic, user_id="user-a", title=lic, status="indexed",
-                          created_at=_NOW, updated_at=_NOW))
-        db.add(_section(f"freq-{i}", lic, "user-a", "Recurrente", order=0))
-    db.add(_section("once", "lic-a2", "user-a", "Rara", order=1))
-    db.commit()
-    titles = recurring_titles("user-a", exclude_licitacion_id="lic-a", db=db)
-    assert titles[0] == "Recurrente"
+def test_coherencia_404_for_missing_document(client_a):
+    r = client_a.post("/api/v1/licitaciones/lic-a/memoria/documents/nope/coherencia")
+    assert r.status_code == 404

@@ -371,6 +371,8 @@ class MemoriaEsquemaResponse(BaseModel):
 # Endpoint 2 — generación de propuesta redactada (agente propuesta).
 class MemoriaPropuestaRequest(BaseModel):
     esquema: List[MemoriaSectionDraft] = Field(default_factory=list)
+    # Tono de la redacción (spec-memoria-prompts §2): ejecutivo | tecnico | comercial.
+    tono: str = "técnico"
 
 
 class MemoriaPropuestaResponse(BaseModel):
@@ -411,6 +413,18 @@ class MemoriaDocumentResponse(BaseModel):
 class MemoriaDocumentPatch(BaseModel):
     title: Optional[str] = None
     markdown: Optional[str] = None
+
+
+# Revisión de coherencia del borrador completo (spec-memoria-prompts §4).
+class MemoriaIncidencia(BaseModel):
+    tipo: str        # contradiccion | repeticion | requisito_sin_cubrir | completar_pendiente | verificar
+    apartado: str
+    detalle: str
+
+
+class MemoriaCoherenciaResponse(BaseModel):
+    doc_id: str
+    incidencias: List[MemoriaIncidencia] = Field(default_factory=list)
 
 
 # ── Auditoría del sistema (solo admin, GET /system/audit) ─────────────────────

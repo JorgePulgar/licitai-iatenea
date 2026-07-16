@@ -1,5 +1,17 @@
 # Deuda técnica
 
+### 2026-07-16 — Test S6 de fabricación (spec-memoria-prompts §6) pendiente de ejecutar en live
+- **Qué:** El gate duro de DM8 ("con perfil pobre: cero capacidades inventadas + ≥1 `[COMPLETAR:`") está implementado en `tests/services/test_memoria_prompts.py` pero gateado con `RUN_MEMORIA_EVAL_LIVE=1`: **nunca se ha ejecutado contra el LLM real** (esta máquina no tiene `backend/.env`). La capa offline (invariantes de prompts, fencing, temperaturas, enum de tono) sí corre en cada suite.
+- **Por qué:** Mismo caso que la suite de inyección live (entrada 2026-07-05): la resistencia real del modelo solo se observa con llamadas reales.
+- **Impacto:** El checklist de spec-memoria-prompts §7 ("fabrication test… passing before DM8 is declared done") queda condicionado a esa ejecución. Riesgo: un borrador que invente capacidades delante de un cliente.
+- **Propuesta:** En la máquina con `.env`: `RUN_MEMORIA_EVAL_LIVE=1 pytest tests/services/test_memoria_prompts.py`; registrar fecha+resultado aquí. Repetir tras cualquier cambio de prompt. Ampliar a la suite S6 completa (structure check + judge) con spec-5.3 (DM9).
+
+### 2026-07-16 — El lado corpus de la redacción de Memoria es solo el perfil de empresa
+- **Qué:** spec-memoria-prompts §5 prescribe retrieval híbrido sobre el "company knowledge" (perfil + memorias previas + certificaciones) para el contexto CAPACIDADES REALES. Hoy no existe ese índice: el servicio inyecta únicamente el texto del perfil (`CompanyProfile`).
+- **Por qué:** El corpus de empresa indexado depende de la feature de plantillas/conocimiento (3.2b y siguientes), fuera del alcance demo-minimal.
+- **Impacto:** Borradores con más marcadores `[COMPLETAR: …]` de los necesarios cuando la empresa sí tiene material (en memorias previas no indexadas). Para la demo es aceptable e incluso ilustrativo (los marcadores son el argumento de venta anti-fabricación).
+- **Propuesta:** Al reescribir 3.2b, indexar el corpus de empresa y cambiar `_default_profile_context` por retrieval híbrido top_k 6 + aviso "poco material de empresa" cuando devuelva <2 chunks (spec §5).
+
 ### 2026-07-16 — La propuesta de Memoria no cumple aún la regla de latencia R2 (stream o <20 s)
 - **Qué:** `POST /memoria/propuesta` (DM5) es síncrono y sin streaming. Con esquemas de 6-10 secciones el fan-out paralelo puede superar los 20 s de pared que exige spec-demo-minimal DM5 (red-team R2) y no emite tokens al FE.
 - **Por qué:** Streaming por sección requiere SSE/chunked en el endpoint y consumo incremental en el FE — no era barato dentro del alcance DM5, y el propio spec prevé el fallback.

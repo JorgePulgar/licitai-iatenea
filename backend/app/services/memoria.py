@@ -5,11 +5,12 @@ Contrato (síncrono, sin cola; el worker de 4.1 podrá invocar estas funciones t
 porque no dependen de la request: reciben ids + sesión de BD explícitos):
 
 - ``propose_esquema(licitacion_id, user_id, title, user_message, db)``
-    → ``MemoriaEsquemaResponse`` {reply, esquema[]}. Propone la estructura de secciones
-      (no persiste). Grounding: criterios de adjudicación ya extraídos
-      (``PliegoRequirement`` categoria='criterio_adjudicacion'); fallback búsqueda
-      híbrida sobre el PCAP. Contexto adicional: títulos recurrentes de memorias
-      previas del usuario y secciones ya guardadas.
+    → ``MemoriaEsquemaResponse`` {reply, esquema[]}. Extrae la ESTRUCTURA EXIGIDA
+      del pliego (prompt v2, spec-memoria-prompts §1; no persiste). Grounding:
+      fragmentos de estructura del PPT + criterios de adjudicación (los ya
+      extraídos en ``pliego_requirements``; fallback búsqueda sobre el PCAP),
+      fenceados como datos no confiables. El ``reply`` conversacional se
+      construye en código a partir del JSON del LLM.
 - ``draft_propuesta(licitacion_id, user_id, title, esquema, db, session_factory)``
     → ``MemoriaDocument`` persistido. Redacción por sección EN PARALELO (un agente
       LLM por apartado, semáforo de concurrencia); el documento final se cose de
@@ -38,7 +39,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
@@ -55,9 +55,10 @@ from app.models.schemas import (
     MemoriaSectionResponse,
 )
 from app.prompts.memoria import (
-    MEMORIA_CHAT_PROMPT,
+    MEMORIA_COHERENCE_PROMPT,
     MEMORIA_ESQUEMA_PROMPT,
     MEMORIA_INTRO_PROMPT,
+    MEMORIA_REFINE_PROMPT,
     MEMORIA_SECTION_PROMPT,
 )
 from app.services.embeddings import get_openai_client
@@ -68,25 +69,35 @@ logger = get_logger(__name__)
 
 LLM_MODEL = "extraccion_datos_4o"
 
-# Temperaturas por tarea (CLAUDE.md §8: 0.2 extractivo, más alta solo en redacción).
+# Temperaturas por tarea (spec-memoria-prompts, cabecera): esquema 0.2 ·
+# redacción 0.5 · refinado 0.4 · coherencia 0.2.
 ESQUEMA_TEMPERATURE = 0.2
 DRAFT_TEMPERATURE = 0.5
-REFINE_TEMPERATURE = 0.2
+REFINE_TEMPERATURE = 0.4
+COHERENCE_TEMPERATURE = 0.2
 INTRO_TEMPERATURE = 0.3
 INTRO_MAX_TOKENS = 400
 
+# Tono por defecto de la redacción (spec-MP §2: ejecutivo | tecnico | comercial).
+DEFAULT_TONE = "técnico"
+VALID_TONES = frozenset({"ejecutivo", "técnico", "tecnico", "comercial"})
+
+
+def normalize_tone(tone: str | None) -> str:
+    """Tono validado contra el enum del prompt; fuera de enum → tono por defecto
+    (al prompt nunca viaja texto arbitrario del cliente en este placeholder)."""
+    return tone if tone and tone.lower() in VALID_TONES else DEFAULT_TONE
+
 # Nº máximo de agentes de sección simultáneos (cuota TPM/RPM de Azure OpenAI).
 DRAFT_CONCURRENCY = 5
-# Chunks del PPT por sección (retrieval específico del apartado).
-SECTION_EVIDENCE_TOP_K = 8
-# Chunks del PCAP para el fallback de criterios del esquema.
+# Chunks del pliego por apartado (retrieval específico, spec-MP §5: top_k 6).
+SECTION_EVIDENCE_TOP_K = 6
+# Chunks para el grounding del esquema (estructura PPT / criterios PCAP).
 CRITERIOS_FALLBACK_TOP_K = 8
 # Chunks del PPT para el contexto global del chat de refinado.
 REFINE_CONTEXT_TOP_K = 20
 # Requisitos máximos inyectados a cada agente de sección.
 SECTION_MAX_REQUISITOS = 6
-# Títulos recurrentes de memorias previas que se ofrecen como plantilla implícita.
-RECURRING_TITLES_LIMIT = 12
 # Turnos previos del chat de refinado que se reinyectan al LLM.
 REFINE_HISTORY_LIMIT = 20
 
@@ -189,68 +200,9 @@ def delete_section(licitacion_id: str, user_id: str, section_id: str, db: Sessio
     return deleted > 0
 
 
-def recurring_titles(user_id: str, exclude_licitacion_id: str, db: Session) -> list[str]:
-    """
-    Títulos de sección que se repiten en memorias `accepted` previas del usuario
-    (plantilla implícita), ordenados por frecuencia. Excluye la licitación actual
-    y respeta el aislamiento por user_id (§10).
-    """
-    normalized = func.lower(func.trim(MemoriaSection.title))
-    rows = (
-        db.query(MemoriaSection.title, func.count().label("freq"))
-        .filter(
-            MemoriaSection.user_id == user_id,
-            MemoriaSection.licitacion_id != exclude_licitacion_id,
-            MemoriaSection.status == "accepted",
-        )
-        .group_by(normalized, MemoriaSection.title)
-        .order_by(func.count().desc())
-        .limit(RECURRING_TITLES_LIMIT)
-        .all()
-    )
-    seen: set[str] = set()
-    titles: list[str] = []
-    for title, _freq in rows:
-        key = " ".join((title or "").lower().split())
-        if key and key not in seen:
-            seen.add(key)
-            titles.append(title)
-    return titles
-
-
 # ═══════════════════════════════════════════════════════════════════════════
-# Fase 1 — esquema (propuesta de estructura, no persiste)
+# Fase 1 — esquema (extracción de la estructura exigida, no persiste)
 # ═══════════════════════════════════════════════════════════════════════════
-
-async def _criterios_context(licitacion_id: str, user_id: str, db: Session) -> str:
-    """
-    Criterios de adjudicación como texto de grounding. Primero los ya extraídos
-    (requisitos categoria='criterio_adjudicacion'); si no hay, búsqueda híbrida
-    sobre el PCAP.
-    """
-    extracted = (
-        db.query(PliegoRequirement)
-        .filter(
-            PliegoRequirement.licitacion_id == licitacion_id,
-            PliegoRequirement.categoria == "criterio_adjudicacion",
-        )
-        .all()
-    )
-    if extracted:
-        return "\n".join(
-            f"- {r.descripcion}" + (f" [p. {r.pagina}]" if r.pagina else "")
-            for r in extracted
-        )
-
-    chunks = await hybrid_search(
-        "criterios de adjudicación, juicio de valor, puntuación de la memoria técnica",
-        licitacion_id,
-        user_id,
-        top_k=CRITERIOS_FALLBACK_TOP_K,
-        document_type="pcap",
-    )
-    return _chunks_as_text(chunks)
-
 
 def _chunks_as_text(chunks: list[dict[str, Any]]) -> str:
     """Chunks → bloque de texto con etiqueta de página, en orden de lectura."""
@@ -262,50 +214,114 @@ def _chunks_as_text(chunks: list[dict[str, Any]]) -> str:
     )
 
 
-def _esquema_user_message(
-    title: str,
-    user_message: str,
-    criterios: str,
-    previous_titles: list[str],
-    existing: list[MemoriaSectionResponse],
-) -> str:
-    blocks = [f"Licitación: '{title}'", f"\nMensaje del usuario: {user_message}"]
-    if criterios:
-        blocks.append(f"\nCRITERIOS DE ADJUDICACIÓN del pliego:\n{criterios}")
-    else:
-        blocks.append(
-            "\nCRITERIOS DE ADJUDICACIÓN: no disponibles. Si te faltan datos, "
-            "pregunta al usuario en 'reply'."
+async def _esquema_grounding(licitacion_id: str, user_id: str, db: Session) -> str:
+    """
+    Contexto para extraer la estructura exigida (spec-MP §1): fragmentos del PPT
+    sobre la estructura de la memoria + criterios de adjudicación (los ya
+    extraídos en `pliego_requirements`; si no hay, búsqueda sobre el PCAP).
+    """
+    estructura_chunks = await hybrid_search(
+        "estructura de la memoria técnica, apartados exigidos, índice de la memoria, "
+        "límite de páginas, formato de presentación de la oferta técnica",
+        licitacion_id,
+        user_id,
+        top_k=CRITERIOS_FALLBACK_TOP_K,
+        document_type="ppt",
+    )
+    blocks = []
+    if estructura_chunks:
+        blocks.append(_chunks_as_text(estructura_chunks))
+
+    extracted = (
+        db.query(PliegoRequirement)
+        .filter(
+            PliegoRequirement.licitacion_id == licitacion_id,
+            PliegoRequirement.categoria == "criterio_adjudicacion",
         )
-    if previous_titles:
-        listed = "\n".join(f"- {t}" for t in previous_titles)
-        blocks.append(f"\nPLANTILLA (secciones de memorias previas del usuario):\n{listed}")
-    if existing:
-        listed = "\n".join(f"- {s.title}" for s in existing)
-        blocks.append(f"\nSECCIONES EXISTENTES (refínalas, no las dupliques):\n{listed}")
-    return "\n".join(blocks)
+        .all()
+    )
+    if extracted:
+        blocks.append(
+            "CRITERIOS DE ADJUDICACIÓN (extraídos del pliego):\n"
+            + "\n".join(
+                f"- {r.descripcion}" + (f" [p. {r.pagina}]" if r.pagina else "")
+                for r in extracted
+            )
+        )
+    else:
+        criterios_chunks = await hybrid_search(
+            "criterios de adjudicación, juicio de valor, puntuación de la memoria técnica",
+            licitacion_id,
+            user_id,
+            top_k=CRITERIOS_FALLBACK_TOP_K,
+            document_type="pcap",
+        )
+        if criterios_chunks:
+            blocks.append(_chunks_as_text(criterios_chunks))
+
+    return "\n\n".join(blocks)
 
 
-def _drafts_from_llm(raw: list[Any]) -> list[MemoriaSectionDraft]:
-    """Salida del LLM → drafts validados (descarta entradas sin título)."""
+def _first_number(raw: Any) -> float | None:
+    """Primer número de un valor libre del LLM ("60 puntos" → 60.0). None si no hay."""
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    match = re.search(r"\d+(?:[.,]\d+)?", str(raw))
+    return float(match.group().replace(",", ".")) if match else None
+
+
+def _drafts_from_apartados(raw: list[Any]) -> list[MemoriaSectionDraft]:
+    """
+    Apartados del JSON v2 (spec-MP §1) → drafts del contrato del producto.
+    Mapeo: numero+titulo → title · criterio → criterio_adjudicacion · peso →
+    max_puntos (número extraído) · limite → page_budget (número extraído) ·
+    fuente_pagina → description "[p. X]".
+    """
     drafts: list[MemoriaSectionDraft] = []
     for position, item in enumerate(raw):
         if not isinstance(item, dict):
             continue
-        title = str(item.get("title") or "").strip()
-        if not title:
+        titulo = str(item.get("titulo") or "").strip()
+        if not titulo:
             continue
+        numero = str(item.get("numero") or "").strip()
+        title = f"{numero}. {titulo}" if numero and not titulo.startswith(numero) else titulo
+
+        fuente = item.get("fuente_pagina")
+        description = f"Definido en el pliego [p. {fuente}]" if fuente else None
+
+        page_budget = _first_number(item.get("limite"))
         drafts.append(
             MemoriaSectionDraft(
                 title=title,
-                description=item.get("description"),
-                criterio_adjudicacion=item.get("criterio_adjudicacion"),
-                max_puntos=item.get("max_puntos"),
-                page_budget=item.get("page_budget"),
-                sort_order=item.get("sort_order", position),
+                description=description,
+                criterio_adjudicacion=item.get("criterio") or None,
+                max_puntos=_first_number(item.get("peso")),
+                page_budget=int(page_budget) if page_budget else None,
+                sort_order=position,
             )
         )
     return drafts
+
+
+def _esquema_reply(estructura_impuesta: bool, count: int, limite_total: Any) -> str:
+    """Mensaje conversacional para el FE (el JSON v2 del LLM ya no lo trae)."""
+    if count == 0:
+        return (
+            "No he encontrado en el pliego una estructura exigida ni criterios "
+            "suficientes para proponer apartados. Revisa que el pliego esté indexado."
+        )
+    base = (
+        f"El pliego exige una estructura concreta: {count} apartados, reproducidos con su numeración original."
+        if estructura_impuesta
+        else f"El pliego no impone estructura; propongo {count} apartados a partir de los criterios de adjudicación."
+    )
+    limite = _first_number(limite_total)
+    if limite:
+        base += f" Límite total de la memoria: {int(limite)} páginas."
+    return base
 
 
 async def propose_esquema(
@@ -315,12 +331,10 @@ async def propose_esquema(
     user_message: str,
     db: Session,
 ) -> MemoriaEsquemaResponse:
-    """Propone la estructura de la memoria (sin persistir). Ver docstring de módulo."""
+    """Extrae la estructura exigida de la memoria (sin persistir). Ver docstring de módulo."""
     started = time.monotonic()
 
-    existing = get_sections(licitacion_id, user_id, db)
-    previous_titles = recurring_titles(user_id, licitacion_id, db)
-    criterios = await _criterios_context(licitacion_id, user_id, db)
+    grounding = await _esquema_grounding(licitacion_id, user_id, db)
 
     client = get_openai_client()
     if not client:
@@ -330,6 +344,13 @@ async def propose_esquema(
             esquema=[],
         )
 
+    # Los fragmentos del pliego son texto no confiable → fenceados (1.8).
+    user_content = (
+        f"Licitación: '{title}'\n"
+        + (f"Indicaciones del usuario: {user_message}\n" if user_message else "")
+        + f"\n<fragmentos_pliego>\n{grounding or 'Sin fragmentos disponibles.'}\n</fragmentos_pliego>"
+    )
+
     try:
         response = await client.chat.completions.create(
             model=LLM_MODEL,
@@ -337,12 +358,7 @@ async def propose_esquema(
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": MEMORIA_ESQUEMA_PROMPT},
-                {
-                    "role": "user",
-                    "content": _esquema_user_message(
-                        title, user_message, criterios, previous_titles, existing
-                    ),
-                },
+                {"role": "user", "content": user_content},
             ],
         )
         payload = json.loads(response.choices[0].message.content or "{}")
@@ -353,16 +369,20 @@ async def propose_esquema(
         logger.error(f"Error proponiendo esquema de memoria de {licitacion_id}: {e}", exc_info=True)
         raise
 
-    esquema = _drafts_from_llm(payload.get("secciones", []))
-    reply = str(payload.get("reply") or "").strip() or "He propuesto una estructura de secciones."
+    esquema = _drafts_from_apartados(payload.get("apartados", []))
+    reply = _esquema_reply(
+        bool(payload.get("estructura_impuesta")),
+        len(esquema),
+        payload.get("limite_total_paginas"),
+    )
 
     logger.info(
         "Esquema de memoria propuesto",
         extra={
             "licitacion_id": licitacion_id,
             "esquema_count": len(esquema),
-            "has_criterios": bool(criterios),
-            "existing_count": len(existing),
+            "estructura_impuesta": bool(payload.get("estructura_impuesta")),
+            "has_grounding": bool(grounding),
             "latency_ms": int((time.monotonic() - started) * 1000),
             "model": LLM_MODEL,
         },
@@ -436,6 +456,31 @@ def _default_profile_context(user_id: str, db: Session) -> str:
     return build_profile_text(profile)
 
 
+def _section_limite(section: MemoriaSectionDraft) -> str:
+    """Instrucción de extensión para el prompt (spec-MP §2, placeholder {limite})."""
+    if section.page_budget:
+        return f"máximo {section.page_budget} páginas"
+    if section.max_puntos:
+        return "proporcional al peso del criterio en el baremo"
+    return "la necesaria para responder al criterio, sin relleno"
+
+
+def _pliego_context_for_section(
+    evidence: str, requisitos_block: str, section: MemoriaSectionDraft
+) -> str:
+    """Bloque de pliego del apartado: metadatos del criterio + evidencia + requisitos."""
+    parts = []
+    if section.criterio_adjudicacion:
+        peso = f" (peso: {section.max_puntos})" if section.max_puntos is not None else ""
+        parts.append(f"Criterio de adjudicación del apartado: {section.criterio_adjudicacion}{peso}")
+    if section.description:
+        parts.append(f"Alcance indicado en el esquema: {section.description}")
+    parts.append(evidence or "Sin fragmentos del pliego para este apartado.")
+    if requisitos_block:
+        parts.append(f"Requisitos del pliego afines al apartado:\n{requisitos_block}")
+    return "\n\n".join(parts)
+
+
 async def _draft_one_section(
     client: Any,
     licitacion_id: str,
@@ -444,12 +489,14 @@ async def _draft_one_section(
     section: MemoriaSectionDraft,
     requisitos: list[PliegoRequirement],
     profile_context: str,
+    tone: str,
     gate: asyncio.Semaphore,
 ) -> str:
     """
-    Redacta el Markdown de UNA sección (evidencia del PPT + requisitos afines +
-    perfil). Si el LLM falla, devuelve la sección degradada con marcador: la
-    propuesta completa nunca aborta por una sección.
+    Redacta el Markdown de UN apartado con el prompt v2 (spec-MP §2): contexto del
+    pliego y capacidades de la empresa bajo sus cabeceras etiquetadas, fenceados.
+    Retrieval por apartado (spec-MP §5): query = título + criterio, top_k 6, sin
+    filtro de documento. Si el LLM falla, degrada con marcador (nunca aborta).
     """
     async with gate:
         evidence_chunks = await hybrid_search(
@@ -457,36 +504,30 @@ async def _draft_one_section(
             licitacion_id,
             user_id,
             top_k=SECTION_EVIDENCE_TOP_K,
-            document_type="ppt",
         )
-        evidence = _chunks_as_text(evidence_chunks)
-        requisitos_block = _assign_requisitos(section, requisitos)
-
-        header = [f"Título de la sección: {section.title}"]
-        if section.description:
-            header.append(f"Qué debe cubrir: {section.description}")
-        if section.criterio_adjudicacion:
-            header.append(f"Criterio de adjudicación al que responde: {section.criterio_adjudicacion}")
-        if section.max_puntos is not None:
-            header.append(f"Puntos del criterio: {section.max_puntos}")
-        if section.page_budget is not None:
-            header.append(f"Extensión recomendada: {section.page_budget} páginas")
-
-        user_message = "\n".join([
-            f"Licitación: '{licitacion_title}'",
-            "\nSECCIÓN A REDACTAR:\n" + "\n".join(header),
-            f"\nEVIDENCIA DEL PPT (relevante para esta sección):\n{evidence or 'No disponible.'}",
-            f"\nREQUISITOS RELEVANTES:\n{requisitos_block or 'No disponibles.'}",
-            f"\nPERFIL DE LA EMPRESA:\n{profile_context}",
-        ])
+        prompt = MEMORIA_SECTION_PROMPT.format(
+            titulo=section.title,
+            pliego_chunks=_pliego_context_for_section(
+                _chunks_as_text(evidence_chunks),
+                _assign_requisitos(section, requisitos),
+                section,
+            ),
+            corpus_chunks=profile_context,
+            limite=_section_limite(section),
+            tono=tone,
+        )
 
         try:
             response = await client.chat.completions.create(
                 model=LLM_MODEL,
                 temperature=DRAFT_TEMPERATURE,
                 messages=[
-                    {"role": "system", "content": MEMORIA_SECTION_PROMPT},
-                    {"role": "user", "content": user_message},
+                    {"role": "system", "content": prompt},
+                    {
+                        "role": "user",
+                        "content": f"Redacta ahora el apartado \"{section.title}\" "
+                                   f"de la memoria para la licitación '{licitacion_title}'.",
+                    },
                 ],
             )
             markdown = (response.choices[0].message.content or "").strip()
@@ -612,6 +653,7 @@ async def draft_propuesta(
     esquema: list[MemoriaSectionDraft],
     db: Session,
     session_factory: Callable[[], Session] | None = None,
+    tone: str = DEFAULT_TONE,
 ) -> MemoriaDocument:
     """
     Redacta la Memoria Técnica completa: fan-out de un agente por sección (en
@@ -620,7 +662,15 @@ async def draft_propuesta(
     """
     started = time.monotonic()
 
+    tone = normalize_tone(tone)
     profile_context = _default_profile_context(user_id, db)
+    if profile_context.startswith("No hay perfil"):
+        # spec-MP §5: poco material de empresa → el borrador saldrá lleno de
+        # marcadores [COMPLETAR]. Se avisa en logs (la UI fija expectativas).
+        logger.warning(
+            f"Redacción de memoria sin perfil de empresa (licitación {licitacion_id}): "
+            "el borrador marcará huecos [COMPLETAR] en todo lo relativo a la empresa."
+        )
     requisitos = (
         db.query(PliegoRequirement)
         .filter(PliegoRequirement.licitacion_id == licitacion_id)
@@ -645,7 +695,7 @@ async def draft_propuesta(
         *(
             _draft_one_section(
                 client, licitacion_id, user_id, title, section,
-                requisitos, profile_context, gate,
+                requisitos, profile_context, tone, gate,
             )
             for section in ordered
         )
@@ -883,14 +933,16 @@ async def refine_document(
         logger.warning("Azure OpenAI no configurado — chat de memoria no disponible.")
         return current_markdown, "El servicio de edición no está disponible en este momento."
 
-    messages: list[dict[str, str]] = [{"role": "system", "content": MEMORIA_CHAT_PROMPT}]
+    messages: list[dict[str, str]] = [{"role": "system", "content": MEMORIA_REFINE_PROMPT}]
     messages.extend({"role": m.role, "content": m.content} for m in history)
     messages.append({
         "role": "user",
         "content": (
             f"DOCUMENTO ACTUAL (Markdown):\n{current_markdown}\n\n"
-            f"FRAGMENTOS DEL PPT:\n{ppt_context or 'No disponibles.'}\n\n"
-            f"PERFIL DE LA EMPRESA:\n{profile_context}\n\n"
+            f"CONTEXTO DEL PLIEGO:\n<fragmentos_pliego>\n"
+            f"{ppt_context or 'No disponibles.'}\n</fragmentos_pliego>\n\n"
+            f"CAPACIDADES REALES DE LA EMPRESA:\n<capacidades_empresa>\n"
+            f"{profile_context}\n</capacidades_empresa>\n\n"
             f"PETICIÓN DEL USUARIO: {instruction}\n\n"
             "RECORDATORIO CRÍTICO: SOLO debes modificar lo que pide el usuario. "
             "El resto del documento debe permanecer EXACTAMENTE igual, carácter por "
@@ -931,3 +983,54 @@ async def refine_document(
         },
     )
     return edited, reply
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Fase 4 — revisión de coherencia del borrador completo (spec-MP §4)
+# ═══════════════════════════════════════════════════════════════════════════
+
+async def review_coherence(licitacion_id: str, markdown: str) -> list[dict[str, str]]:
+    """
+    Una llamada sobre el borrador COMPLETO tras la redacción: devuelve la lista de
+    incidencias (contradicciones, repeticiones, requisitos sin cubrir, marcadores
+    [COMPLETAR: …] pendientes, afirmaciones a verificar). NO reescribe: el humano
+    decide qué corregir.
+    """
+    client = get_openai_client()
+    if not client:
+        logger.warning("Azure OpenAI no configurado — revisión de coherencia no disponible.")
+        return []
+
+    try:
+        response = await client.chat.completions.create(
+            model=LLM_MODEL,
+            temperature=COHERENCE_TEMPERATURE,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": MEMORIA_COHERENCE_PROMPT},
+                {"role": "user", "content": f"<borrador>\n{markdown}\n</borrador>"},
+            ],
+        )
+        payload = json.loads(response.choices[0].message.content or "{}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON inválido del LLM en coherencia de memoria de {licitacion_id}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error en revisión de coherencia de {licitacion_id}: {e}", exc_info=True)
+        raise
+
+    raw = payload.get("incidencias", [])
+    issues = [
+        {
+            "tipo": str(item.get("tipo") or "verificar"),
+            "apartado": str(item.get("apartado") or ""),
+            "detalle": str(item.get("detalle") or ""),
+        }
+        for item in raw
+        if isinstance(item, dict) and (item.get("detalle") or item.get("apartado"))
+    ]
+    logger.info(
+        "Revisión de coherencia completada",
+        extra={"licitacion_id": licitacion_id, "incidencias": len(issues), "model": LLM_MODEL},
+    )
+    return issues

@@ -31,6 +31,7 @@ from app.db.database import SessionLocal, get_db
 from app.models.domain import CompanyProfile, Licitacion, User
 from app.models.schemas import (
     MemoriaChatMessageResponse,
+    MemoriaCoherenciaResponse,
     MemoriaDocChatRequest,
     MemoriaDocChatResponse,
     MemoriaDocumentPatch,
@@ -165,6 +166,7 @@ async def draft_propuesta(
         esquema=body.esquema,
         db=db,
         session_factory=SessionLocal,
+        tone=body.tono,
     )
     return MemoriaPropuestaResponse(doc_id=doc.id, title=doc.title, markdown=doc.markdown)
 
@@ -224,6 +226,27 @@ def patch_document(
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento no encontrado")
     return MemoriaDocumentResponse.model_validate(updated)
+
+
+@router.post(
+    "/{licitacion_id}/memoria/documents/{doc_id}/coherencia",
+    response_model=MemoriaCoherenciaResponse,
+)
+async def review_coherence(
+    licitacion_id: str,
+    doc_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MemoriaCoherenciaResponse:
+    """Revisión de coherencia del borrador completo (spec-MP §4): lista de
+    incidencias (contradicciones, [COMPLETAR: …] pendientes, afirmaciones a
+    verificar). No reescribe el documento."""
+    _owned_licitacion_or_404(licitacion_id, current_user.id, db)
+    doc = memoria.get_document_by_id(doc_id, licitacion_id, current_user.id, db)
+    if doc is None or not doc.markdown:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento no encontrado")
+    issues = await memoria.review_coherence(licitacion_id, doc.markdown)
+    return MemoriaCoherenciaResponse(doc_id=doc_id, incidencias=issues)
 
 
 # ── Chat de refinado ─────────────────────────────────────────────────────────
