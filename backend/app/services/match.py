@@ -31,8 +31,10 @@ def compute_profile_hash(profile: CompanyProfile) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _build_profile_text(profile: CompanyProfile) -> str:
-    """Builds a human-readable profile text for the LLM."""
+def build_profile_text(profile: CompanyProfile) -> str:
+    """Builds a human-readable profile text for the LLM.
+
+    API pública: también la consume el servicio de Memoria Técnica (DRY §6)."""
     parts = [f"Empresa: {profile.name}"]
     if profile.description:
         parts.append(f"Descripción: {profile.description}")
@@ -81,7 +83,7 @@ async def calculate_match(
     """
     Evaluates company profile against extracted requirements using LLM.
     """
-    profile_text = _build_profile_text(profile)
+    profile_text = build_profile_text(profile)
     requirements_text = _build_requirements_text(requirements)
 
     client = get_openai_client()

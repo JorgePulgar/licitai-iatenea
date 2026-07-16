@@ -606,8 +606,8 @@ def test_isolation_cannot_delete_other_users_section(client_a, db):
 
 # ── derive_template (servicio) ────────────────────────────────────────────────
 
-def test_derive_template_only_own_user_and_excludes_current(db, users_and_licitaciones):
-    from app.services.memoria import derive_template
+def test_recurring_titles_only_own_user_and_excludes_current(db, users_and_licitaciones):
+    from app.services.memoria import recurring_titles
     db.add(Licitacion(id="lic-a2", user_id="user-a", title="A2", status="indexed",
                       created_at=_NOW, updated_at=_NOW))
     db.add_all([
@@ -617,20 +617,20 @@ def test_derive_template_only_own_user_and_excludes_current(db, users_and_licita
         _section("s4", "lic-b", "user-b", "De B", order=0),
     ])
     db.commit()
-    titles = derive_template("user-a", exclude_licitacion_id="lic-a", db=db)
+    titles = recurring_titles("user-a", exclude_licitacion_id="lic-a", db=db)
     assert "Metodología" in titles
     assert "Equipo" in titles
     assert "Actual" not in titles
     assert "De B" not in titles
 
 
-def test_derive_template_ranks_by_frequency(db, users_and_licitaciones):
-    from app.services.memoria import derive_template
+def test_recurring_titles_ranks_by_frequency(db, users_and_licitaciones):
+    from app.services.memoria import recurring_titles
     for i, lic in enumerate(["lic-a2", "lic-a3"]):
         db.add(Licitacion(id=lic, user_id="user-a", title=lic, status="indexed",
                           created_at=_NOW, updated_at=_NOW))
         db.add(_section(f"freq-{i}", lic, "user-a", "Recurrente", order=0))
     db.add(_section("once", "lic-a2", "user-a", "Rara", order=1))
     db.commit()
-    titles = derive_template("user-a", exclude_licitacion_id="lic-a", db=db)
+    titles = recurring_titles("user-a", exclude_licitacion_id="lic-a", db=db)
     assert titles[0] == "Recurrente"

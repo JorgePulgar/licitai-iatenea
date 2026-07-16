@@ -1,7 +1,7 @@
 # Phase 4 — Reliability (what makes the maintenance contract honest)
 
 > Prereq reading: `plan/00-CONTEXT.md` §2 (rewrite rules).
-> **Status:** no tasks done yet (2026-07-05). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. Note: **DM5 implements only 4.1's ♻-scope** (memoria service/endpoint rewrite, synchronous, NO queue/worker) — when DM5 is ticked, 4.1's queue work here remains open.
+> **Status:** DM5 ✅ 2026-07-16 (4.1's ♻-scope only: `services/memoria.py` + `endpoints/memoria.py` rewritten, synchronous). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. Note: **DM5 implements only 4.1's ♻-scope** (memoria service/endpoint rewrite, synchronous, NO queue/worker) — 4.1's queue work here remains open (pipeline.py/ocr.py rewrites included).
 
 ## 4.1 ♻ Queue-based processing pipeline — L — Opus 4.8 implement, Fable 5 spec + diff review
 

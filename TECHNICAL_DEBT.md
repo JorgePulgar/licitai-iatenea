@@ -1,5 +1,23 @@
 # Deuda técnica
 
+### 2026-07-16 — La propuesta de Memoria no cumple aún la regla de latencia R2 (stream o <20 s)
+- **Qué:** `POST /memoria/propuesta` (DM5) es síncrono y sin streaming. Con esquemas de 6-10 secciones el fan-out paralelo puede superar los 20 s de pared que exige spec-demo-minimal DM5 (red-team R2) y no emite tokens al FE.
+- **Por qué:** Streaming por sección requiere SSE/chunked en el endpoint y consumo incremental en el FE — no era barato dentro del alcance DM5, y el propio spec prevé el fallback.
+- **Impacto:** En demo en vivo, la generación completa en directo arriesga silencio largo o timeout HTTP.
+- **Propuesta:** Ejecutar la demo con el fast path previsto por el spec: secciones pre-generadas + chat de refinado en vivo (rápido). Streaming real llega con la cola 4.1 (202 + polling) o SSE en Fase FE.
+
+### 2026-07-16 — El export de Memoria sigue apoyándose en `services/memoria_export.py` (co-autoreado, 5.6)
+- **Qué:** El endpoint `POST /memoria/export` fue reescrito como adaptador HTTP fino (DM5), pero delega en `render_markdown_pdf` de `services/memoria_export.py`, fichero del inventario ♻ pendiente (tarea 5.6).
+- **Por qué:** El export está explícitamente FUERA del alcance demo-minimal (el borrador se muestra renderizado en pantalla); reescribir el render de PDF era alcance 5.6.
+- **Impacto:** Ninguno para la demo (el export no se ejecuta en la coreografía). Sí bloquea el selling gate hasta completar 5.6.
+- **Propuesta:** Reescritura 5.6 (`memoria_export.py`) según inventario; hasta entonces no ejecutar el export en contextos comerciales.
+
+### 2026-07-16 — Soporte de plantillas de referencia retirado del flujo de Memoria
+- **Qué:** El rewrite DM5 eliminó `template_ids` de los endpoints de Memoria y la inyección de `<PlantillasDeReferencia>`; el servicio ya no importa `services/templates.py` (co-autoreado, 3.2b pendiente).
+- **Por qué:** Regla ♻ del demo path: nada co-autoreado importado en lo que se ejecuta en demos. El flujo de plantillas no forma parte de la coreografía.
+- **Impacto:** Las memorias generadas no adoptan el estilo de memorias previas subidas hasta que 3.2b reescriba la feature. El endpoint `/templates` sigue existiendo (subida/listado) pero la Memoria no lo consume.
+- **Propuesta:** Al hacer 3.2b (rewrite de templates), reconectar `template_ids` + contexto de estilo en esquema y redacción, con su prompt endurecido (prompts-hardened §4).
+
 ### 2026-07-05 — Suite de inyección live (1.8) pendiente de ejecutar contra el entorno real
 - **Qué:** Los 4 tests live de `tests/services/test_prompt_injection.py` (casos 1-4 de prompts-hardened.md §5 contra el LLM real) están escritos y gateados con `RUN_INJECTION_LIVE=1`, pero **aún no se han ejecutado nunca**: esta máquina no tiene `backend/.env` con credenciales Azure.
 - **Por qué:** La capa offline (fencing, invariantes de prompt, esquema blindado) sí corre en cada suite; la resistencia real del modelo a la inyección solo se puede observar con llamadas reales.

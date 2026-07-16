@@ -357,9 +357,10 @@ class MemoriaSectionPatch(BaseModel):
 # Flujo completo (ADR-002): esquema → propuesta (Markdown) → chat → export.
 
 # Endpoint 1 — generación de esquema (agente esquema).
+# Sin template_ids: las plantillas de referencia (CompanyTemplate) son flujo 3.2b,
+# fuera de la ruta de demo (spec-demo-minimal / DM5).
 class MemoriaEsquemaRequest(BaseModel):
     message: str = ""
-    template_ids: List[str] = Field(default_factory=list)
 
 
 class MemoriaEsquemaResponse(BaseModel):
@@ -370,7 +371,6 @@ class MemoriaEsquemaResponse(BaseModel):
 # Endpoint 2 — generación de propuesta redactada (agente propuesta).
 class MemoriaPropuestaRequest(BaseModel):
     esquema: List[MemoriaSectionDraft] = Field(default_factory=list)
-    template_ids: List[str] = Field(default_factory=list)
 
 
 class MemoriaPropuestaResponse(BaseModel):

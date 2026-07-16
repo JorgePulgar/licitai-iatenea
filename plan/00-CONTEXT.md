@@ -39,7 +39,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 | `endpoints/perfil.py` | 3.1 | ☐ |
 | `endpoints/query.py` | 1.7 | ✅ 2026-07-05 |
 | `endpoints/licitaciones.py` | 1.1 + 3.1 | ☐ |
-| `services/memoria.py` + `endpoints/memoria.py` | 4.1 | ☐ |
+| `services/memoria.py` + `endpoints/memoria.py` | 4.1 | ✅ 2026-07-16 (DM5 ♻-scope, síncrono; la cola/worker de 4.1 sigue abierta) |
 | `models/schemas.py` + `models/domain.py` | 3.1 | ☐ |
 | `services/indexing.py` | 3.1 | ☐ |
 | `services/embeddings.py` | 1.4 | ☐ |
