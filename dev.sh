@@ -241,9 +241,12 @@ bootstrap() {
   if [ ! -d "$FRONTEND_DIR/node_modules" ] \
     || [ ! -f "$frontend_stamp" ] \
     || [ "$FRONTEND_DIR/package.json" -nt "$frontend_stamp" ] \
-    || { [ -f "$FRONTEND_DIR/package-lock.json" ] && [ "$FRONTEND_DIR/package-lock.json" -nt "$frontend_stamp" ]; }; then
-    log "$YELLOW" "Instalando dependencias frontend..."
-    (cd "$FRONTEND_DIR" && npm install)
+    || { [ -f "$FRONTEND_DIR/pnpm-lock.yaml" ] && [ "$FRONTEND_DIR/pnpm-lock.yaml" -nt "$frontend_stamp" ]; }; then
+    log "$YELLOW" "Instalando dependencias frontend (pnpm)..."
+    if ! command -v pnpm >/dev/null 2>&1; then
+      corepack enable pnpm 2>/dev/null || npm install -g pnpm
+    fi
+    (cd "$FRONTEND_DIR" && pnpm install)
     touch "$frontend_stamp"
   fi
 

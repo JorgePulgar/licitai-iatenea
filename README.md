@@ -54,6 +54,19 @@ Para preparar el equipo sin arrancar los servicios:
 BOOTSTRAP_ONLY=1 ./dev.sh
 ```
 
+#### Frontend (pnpm)
+
+El frontend usa **pnpm** (v11+) como único gestor de paquetes — no uses npm ni bun
+(el lockfile es `pnpm-lock.yaml`). Comandos habituales desde `frontend/`:
+
+```bash
+pnpm install     # dependencias
+pnpm dev         # servidor de desarrollo (proxy /api → localhost:8000)
+pnpm test        # smoke tests (vitest + Testing Library + msw)
+pnpm typecheck   # TypeScript estricto
+pnpm build       # build de producción
+```
+
 La guía manual y los requisitos de acceso a Azure están en
 [`backend/SETUP_LOCAL.md`](backend/SETUP_LOCAL.md).
 
@@ -94,6 +107,9 @@ provisions Python/Node/Azure CLI/ODBC/Pango when missing, creates
 `backend/.env` from `.env.example`, requests `az login`, and updates the
 database schema. Use `BOOTSTRAP_ONLY=1 ./dev.sh` to prepare the machine without
 starting the services.
+
+The frontend is **pnpm-only** (lockfile: `pnpm-lock.yaml`). From `frontend/`:
+`pnpm install`, `pnpm dev`, `pnpm test`, `pnpm typecheck`, `pnpm build`.
 
 ---
 

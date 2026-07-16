@@ -1,5 +1,17 @@
 # Deuda técnica
 
+### 2026-07-16 — Subida de pliegos server-side provisional hasta spec-1.1
+- **Qué:** El FE-minimal sube los PDFs por multipart a `POST /licitaciones/upload` y el backend los persiste (`services/uploads.py`). Es el fallback previsto por spec-demo-minimal §3.3 ("else server-side upload — acceptable for demo env, note the debt"): sin SAS al navegador, pero los bytes pasan por la API (memoria/ancho de banda del backend) y no hay subida directa a Blob.
+- **Por qué:** El flujo seguro de SAS por blob individual es la tarea 1.1 (spec-1.1-sas.md), aún no implementada. El flujo antiguo (SAS de CONTENEDOR al navegador, finding #1) queda sin uso desde la SPA nueva, pero `GET /licitaciones/upload-token` sigue existiendo en el backend.
+- **Impacto:** Pliegos muy grandes cargan la API; el endpoint antiguo `upload-token` sigue siendo un agujero si alguien lo llama directamente con un JWT válido.
+- **Propuesta:** Implementar 1.1 (SAS de blob + validación) y entonces: FE pasa a subida directa, se elimina `upload-token` y `services/uploads.py` queda solo como fallback dev. Considerar retirar `upload-token` ya en el siguiente pase de backend (nadie lo consume tras DM7).
+
+### 2026-07-16 — FE-minimal: alcance recortado consciente frente a Phase FE
+- **Qué:** La SPA nueva cubre solo la coreografía de demo: sin export/editor TipTap (el borrador se muestra renderizado), sin páginas de ajustes/admin/auditoría, sin gestión de sesiones de chat (cada visita al detalle abre hilo nuevo), responsive "usable en portátil/proyector", y 1 smoke test por pantalla (no la barra ≥1-test-por-página de Phase FE).
+- **Por qué:** spec-demo-minimal §3-§4: resistir el scope creep; FE-minimal es subconjunto estricto de Phase FE, no producto final.
+- **Impacto:** Funcionalidades del SPA antiguo desaparecen temporalmente (export PDF desde UI, editor enriquecido, plantillas, auditoría). El endpoint de export sigue vivo vía API.
+- **Propuesta:** Phase FE extiende (no reescribe): FE.3 editor + export, páginas restantes, paridad de tests. Los seeds (tokens, ui/, http, services) ya siguen spec-fe-design.
+
 ### 2026-07-16 — Test S6 de fabricación (spec-memoria-prompts §6) pendiente de ejecutar en live
 - **Qué:** El gate duro de DM8 ("con perfil pobre: cero capacidades inventadas + ≥1 `[COMPLETAR:`") está implementado en `tests/services/test_memoria_prompts.py` pero gateado con `RUN_MEMORIA_EVAL_LIVE=1`: **nunca se ha ejecutado contra el LLM real** (esta máquina no tiene `backend/.env`). La capa offline (invariantes de prompts, fencing, temperaturas, enum de tono) sí corre en cada suite.
 - **Por qué:** Mismo caso que la suite de inyección live (entrada 2026-07-05): la resistencia real del modelo solo se observa con llamadas reales.

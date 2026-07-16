@@ -1,0 +1,39 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource/jetbrains-mono";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tokens del sistema de diseño Pliexa (spec-fe-design A1).
+ * Neutrales + UN acento (azul acero desaturado, ≠ #2563EB del viejo SPA).
+ * Tema claro v1. Formato "R G B" para permitir <alpha-value> en Tailwind.
+ */
+:root {
+  --color-bg: 246 247 248; /* #F6F7F8 */
+  --color-surface: 255 255 255;
+  --color-ink-1: 28 33 39; /* texto principal */
+  --color-ink-2: 84 94 105; /* texto secundario */
+  --color-ink-3: 140 149 159; /* texto terciario / placeholders */
+  --color-line: 224 228 232; /* bordes */
+  --color-accent: 62 92 118; /* #3E5C76 azul acero */
+  --color-accent-strong: 46 71 93; /* hover del acento */
+  --color-danger: 176 58 62;
+  --color-warn: 176 122 32;
+  --color-ok: 52 120 76;
+}
+
+html {
+  @apply antialiased;
+}
+
+body {
+  @apply bg-bg text-ink-1;
+}
+
+/* Marcadores [COMPLETAR: …] del borrador de Memoria — visibles, no perdidos
+   en el texto (spec-memoria-prompts §7). Se aplican vía Markdown.tsx. */
+.gap-marker {
+  @apply rounded bg-warn/10 px-1 py-0.5 font-medium text-warn;
+}

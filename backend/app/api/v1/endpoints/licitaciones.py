@@ -1,9 +1,19 @@
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import get_current_user
@@ -138,6 +148,59 @@ def _licitacion_response(licitacion: Licitacion) -> LicitacionResponse:
         updated_at=licitacion.updated_at,
         documents=[PliegoResponse.model_validate(p) for p in licitacion.documents],
     )
+
+
+# Tamaño máximo por PDF subido server-side (DM7). 50 MB cubre pliegos escaneados.
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+
+@router.post("/upload", response_model=LicitacionResponse, status_code=status.HTTP_201_CREATED)
+async def create_licitacion_upload(
+    background_tasks: BackgroundTasks,
+    title: str = Form(...),
+    pcap: UploadFile = File(...),
+    ppt: UploadFile | None = File(default=None),
+    deadline: date | None = Form(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Alta de licitación con subida SERVER-SIDE de los PDFs (DM7, FE-minimal).
+
+    El navegador no recibe ningún SAS (finding #1): los ficheros viajan por
+    multipart y el backend los valida (PDF legible, sin contraseña, tope de
+    tamaño) y los persiste en Storage antes de encolar el pipeline.
+    """
+    from app.models.schemas import DocumentUploadInfo, LicitacionCreateRequest
+    from app.services.ingestion import validate_pdf_bytes
+    from app.services.uploads import store_pliego_pdf
+
+    async def read_and_store(upload: UploadFile) -> DocumentUploadInfo:
+        content = await upload.read()
+        filename = upload.filename or "pliego.pdf"
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{filename}' supera el tamaño máximo ({MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
+            )
+        try:
+            validate_pdf_bytes(content, filename)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        blob_url = store_pliego_pdf(content, filename)
+        return DocumentUploadInfo(
+            blob_url=blob_url, filename=filename, size_bytes=len(content)
+        )
+
+    request = LicitacionCreateRequest(
+        title=title,
+        pcap=await read_and_store(pcap),
+        ppt=await read_and_store(ppt) if ppt else None,
+        deadline=deadline,
+    )
+    licitacion = svc_create_licitacion(request, current_user.id, db, background_tasks)
+    db.refresh(licitacion)
+    _ = licitacion.documents
+    return _licitacion_response(licitacion)
 
 
 @router.post("/", response_model=LicitacionResponse, status_code=status.HTTP_201_CREATED)

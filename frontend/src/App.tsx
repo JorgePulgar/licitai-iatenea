@@ -1,75 +1,38 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth';
-import { ModalProvider } from './hooks/useModal';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import LicitacionesPage from './pages/LicitacionesPage';
-import ColaProcesadoPage from './pages/ColaProcesadoPage';
-import CreateLicitacionPage from './pages/CreateLicitacionPage';
-import LicitacionDetailPage from './pages/LicitacionDetailPage';
-import SettingsPage from './pages/SettingsPage';
-import AuditPage from './pages/AuditPage';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/AppShell";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LicitacionDetailPage } from "./pages/LicitacionDetailPage";
+import { LicitacionesPage } from "./pages/LicitacionesPage";
+import { LoginPage } from "./pages/LoginPage";
+import { PerfilPage } from "./pages/PerfilPage";
 
-export default function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 },
+  },
+});
+
+export function App() {
   return (
-    <BrowserRouter>
-      <ModalProvider>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/licitaciones"
-              element={
-                <ProtectedRoute>
-                  <LicitacionesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cola-procesado"
-              element={
-                <ProtectedRoute>
-                  <ColaProcesadoPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/licitaciones/nueva"
-              element={
-                <ProtectedRoute>
-                  <CreateLicitacionPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/licitaciones/:id"
-              element={
-                <ProtectedRoute>
-                  <LicitacionDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/auditoria"
-              element={
-                <ProtectedRoute>
-                  <AuditPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/licitaciones" replace />} />
-          </Routes>
-        </AuthProvider>
-      </ModalProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/licitaciones" element={<LicitacionesPage />} />
+            <Route path="/licitaciones/:id/:tab?" element={<LicitacionDetailPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/licitaciones" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

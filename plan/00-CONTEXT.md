@@ -31,7 +31,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 
 | File | Task | Done |
 |---|---|---|
-| `frontend/src/**` (entire SPA) | Phase FE | ☐ |
+| `frontend/src/**` (entire SPA) | Phase FE | ✅ 2026-07-16 (DM7 FE-minimal: SPA antigua BORRADA y reemplazada; Phase FE = extender, no reescribir) |
 | `services/templates.py` + `endpoints/templates.py` + `prompts/templates.py` | 3.2b | ☐ |
 | `services/requirements.py` + `prompts/requirements.py` + `prompts/match.py` | 5.5 | ✅ 2026-07-05 (DM4; prompts clean-room, sin leer los antiguos) |
 | `services/memoria_export.py` | 5.6 | ☐ |
@@ -82,9 +82,9 @@ Review pattern: implement from spec → review the diff **against the spec's che
 | 0 — Handover + fork | (done, no doc) | ✅ 2026-07-02: gitleaks clean, `tfm-final` pushed, repo forked + rebranded |
 | 1 — Security hardening | `phase-1-security.md` | ◐ 1.6/1.7/1.8 ✅ 2026-07-05 (DM1–DM3) — next: 1.1 |
 | 2 — Deployability | `phase-2-deploy.md` | ☐ |
-| FE — Frontend rebuild | `phase-fe-frontend.md` | ☐ before Phase 3 UI work |
-| 3 — Self-service | `phase-3-selfservice.md` | ☐ |
-| 4 — Reliability | `phase-4-reliability.md` | ☐ |
+| FE — Frontend rebuild | `phase-fe-frontend.md` | ◐ DM7 ✅ 2026-07-16 (FE-minimal, SPA antigua borrada) — resto de la fase = extender a paridad |
+| 3 — Self-service | `phase-3-selfservice.md` | ◐ DM6 ✅ 2026-07-16 (3.1 parcial: solo perfil) |
+| 4 — Reliability | `phase-4-reliability.md` | ◐ DM5 ✅ 2026-07-16 (solo ♻-scope de 4.1; cola/worker abiertos) |
 | 5 — Differentiators | `phase-5-differentiators.md` | ◐ 5.5 ✅ 2026-07-05 (pulled forward as DM4) |
 
 Order: **1.6 → Phase 1 → 2 → FE → 3 → 4 → 5.** Sizes: S ≤1 day, M 2–4 days, L 1–2 weeks.
