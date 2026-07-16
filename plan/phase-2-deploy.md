@@ -2,6 +2,7 @@
 
 > Prereq reading: `plan/00-CONTEXT.md`. This phase is the revenue engine: a repeatable, scripted environment.
 > **Two-tier update (2026-07-04)**: the Bicep stack (2.2) serves BOTH the single shared standard-tier env (all standard clients) and dedicated premium envs (one per client). Full design — envType param, tenant registry, admin CLI provisioning, per-org metering/quotas, tier-migration runbook: **`specs/spec-2.2b-shared-tier.md`** (amends 2.2, 2.5, 2.6, 3.1).
+> **Status:** no tasks done yet (2026-07-05). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. This phase is entirely OUT of the demo-minimal milestone (demo runs on the existing dev env).
 
 ## 2.1 Docker — M — Sonnet 5
 

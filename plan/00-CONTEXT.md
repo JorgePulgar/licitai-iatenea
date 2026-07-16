@@ -80,12 +80,12 @@ Review pattern: implement from spec → review the diff **against the spec's che
 | Phase | Doc | Status |
 |---|---|---|
 | 0 — Handover + fork | (done, no doc) | ✅ 2026-07-02: gitleaks clean, `tfm-final` pushed, repo forked + rebranded |
-| 1 — Security hardening | `phase-1-security.md` | ☐ start with 1.6 |
+| 1 — Security hardening | `phase-1-security.md` | ◐ 1.6/1.7/1.8 ✅ 2026-07-05 (DM1–DM3) — next: 1.1 |
 | 2 — Deployability | `phase-2-deploy.md` | ☐ |
 | FE — Frontend rebuild | `phase-fe-frontend.md` | ☐ before Phase 3 UI work |
 | 3 — Self-service | `phase-3-selfservice.md` | ☐ |
 | 4 — Reliability | `phase-4-reliability.md` | ☐ |
-| 5 — Differentiators | `phase-5-differentiators.md` | ☐ |
+| 5 — Differentiators | `phase-5-differentiators.md` | ◐ 5.5 ✅ 2026-07-05 (pulled forward as DM4) |
 
 Order: **1.6 → Phase 1 → 2 → FE → 3 → 4 → 5.** Sizes: S ≤1 day, M 2–4 days, L 1–2 weeks.
 

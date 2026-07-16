@@ -26,7 +26,7 @@ Completes the `audit.py` replacement started in 1.6, now org-scoped: win rate (`
 
 Monthly usage per org: queries, tokens (persisted since 1.7), documents processed, DI pages. Surfaced in admin UI + optional email. Feeds your pricing/upsell conversations. **Acceptance:** report matches App Insights/DB numbers on a seeded env.
 
-## 5.5 ♻ Rewrite requirements feature — M — Opus 4.8
+## 5.5 ♻ Rewrite requirements feature — M — Opus 4.8 — ✅ 2026-07-05 (pulled forward as DM4; see CHANGELOG)
 
 Replaces `services/requirements.py`, `prompts/requirements.py`, `prompts/match.py`. Improvements to spec in:
 - **Parallel retrieval**: the old code runs 18 hybrid searches sequentially — `asyncio.gather` them (~18× latency win).

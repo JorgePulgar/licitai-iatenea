@@ -2,8 +2,9 @@
 
 > Prereq reading: `plan/00-CONTEXT.md` (esp. §2 rewrite rules for ♻ tasks and §3 findings).
 > Execution order inside the phase: **1.6 first** (live unauthenticated endpoint), then any order.
+> **Status (2026-07-05, via demo-minimal milestone):** 1.6 ✅ (DM1), 1.7 ✅ (DM2), and 1.8 ✅ (DM3 — hardened prompts, spec `prompts-hardened.md`; not listed as a section here) are done. Source of truth: DM table in `specs/spec-demo-minimal.md` + inventory in `00-CONTEXT.md` §2. Next in-phase task: 1.1.
 
-## 1.6 ♻ Rewrite `endpoints/audit.py` — URGENT — S — Opus 4.8
+## 1.6 ♻ Rewrite `endpoints/audit.py` — URGENT — S — Opus 4.8 — ✅ 2026-07-05 (DM1)
 
 `GET /api/v1/system/audit` currently has **no auth dependency**: anyone reaching the API gets every user's email, full name, per-user usage and token counts (finding #2).
 
@@ -25,7 +26,7 @@ Finding #1: backend hands the browser a **container-level SAS** (`frontend/src/s
 
 **Acceptance:** integration test proves user A's SAS cannot read or write user B's path.
 
-## 1.7 ♻ Rewrite `endpoints/query.py` — M — Opus 4.8
+## 1.7 ♻ Rewrite `endpoints/query.py` — M — Opus 4.8 — ✅ 2026-07-05 (DM2)
 
 Defects found in the old file:
 - `except Exception` swallows persistence failures silently (no logging).

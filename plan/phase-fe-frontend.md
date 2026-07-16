@@ -2,6 +2,7 @@
 
 > Prereq reading: `plan/00-CONTEXT.md` §2 (rewrite rules) and `claude.md` §5 (UI style rules — sober, Linear/Notion-like, responsive, no AI-look).
 > The entire current `frontend/src/` is co-authored (~96% Siro) → **complete rewrite from functional specs, never porting files**. Old code may be *run* to observe behavior for spec-writing, but not copied.
+> **Status:** no tasks done yet (2026-07-05). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. Note: **DM7 builds FE-minimal** (5 screens, strict subset of this phase, old SPA deleted at its merge — see `specs/spec-demo-minimal.md` §3) — when DM7 is ticked, this phase = extend FE-minimal to parity, not start from zero.
 
 ## Known defects of the old SPA (avoid repeating; improve on)
 

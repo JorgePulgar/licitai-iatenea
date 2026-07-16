@@ -1,6 +1,7 @@
 # Phase 3 — Self-service product (org model + user lifecycle)
 
 > Prereq reading: `plan/00-CONTEXT.md` §2 (rewrite rules). Phase FE should be done (3.5 builds on the new frontend).
+> **Status:** no tasks done yet (2026-07-05). Done tasks get ✅ on their heading here; canonical status lives in `00-CONTEXT.md` §5 (phase table) + §2 (inventory) + the DM table in `specs/spec-demo-minimal.md`. Note: **DM6 implements a partial 3.1** (perfil endpoint rewrite ♻, single-profile, NO org model/migration) — when DM6 is ticked, 3.1 here remains open; only the perfil rewrite is done.
 
 ## 3.1 ♻ Organization model — L — Fable 5
 
