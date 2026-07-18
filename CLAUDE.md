@@ -47,7 +47,7 @@
 | **Secretos** | Azure Key Vault |
 | **Observabilidad** | Azure Application Insights, logging JSON estructurado |
 | **Auth** | JWT propio (bcrypt/argon2), expiración 24h |
-| **CI/CD** | GitHub Actions (por configurar) |
+| **CI/CD** | GitHub Actions (`.github/workflows/ci.yml`: pytest backend offline + vitest/build frontend en cada push/PR) |
 | **Testing** | pytest (backend), vitest o similar (frontend) |
 
 ---
