@@ -37,7 +37,7 @@ Replaces `services/requirements.py`, `prompts/requirements.py`, `prompts/match.p
 
 **Acceptance:** generation ≤ ~1/10 of old latency on same corpus; regenerate works; invalid pages dropped; tests.
 
-## 5.6 ♻ Rewrite export service — M — Opus 4.8
+## 5.6 ♻ Rewrite export service — M — Opus 4.8 — ✅ 2026-07-18 (see CHANGELOG)
 
 Replaces `services/memoria_export.py`. WeasyPrint from spec (keep the table/figure `break-after: avoid` learnings — documented in old CHANGELOG 2026-06-23 — as spec requirements, not copied code). Add: DOCX export (python-docx already a dep), configurable header/footer (company name/logo), optional TOC. **Acceptance:** PDF+DOCX export of a multi-page memoria with tables; captions never orphaned.
 

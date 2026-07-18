@@ -13,7 +13,7 @@ Contrato:
   PATCH /documents/{id}        → edición manual (autosave del editor)
   POST /chat                   → edita el Markdown vía chat            {markdown, texto_chat}
   GET /chat[?doc_id=]          → historial del chat de refinado
-  POST /export                 → Markdown → PDF (el servicio de render es 5.6, pendiente ♻)
+  POST /export                 → Markdown → PDF o DOCX (servicio 5.6 ♻; format, TOC, header/footer)
 
 Sin plantillas de referencia (CompanyTemplate): flujo 3.2b, fuera de la ruta de demo.
 Ejecución síncrona sin cola (la cola llega en 4.1; el servicio ya es invocable desde
@@ -285,19 +285,21 @@ def chat_history(
     return [MemoriaChatMessageResponse.model_validate(r) for r in rows]
 
 
-# ── Export a PDF ─────────────────────────────────────────────────────────────
-# El servicio de render (services/memoria_export.py) es la tarea 5.6 (♻ pendiente):
-# este endpoint es solo el adaptador HTTP. El export NO forma parte de la demo
-# (spec-demo-minimal §2 DM5: el borrador se muestra renderizado en pantalla).
+# ── Export (PDF / DOCX) ──────────────────────────────────────────────────────
+# Adaptador HTTP del servicio de render (services/memoria_export.py, tarea 5.6 ♻).
+# El export NO forma parte de la demo (spec-demo-minimal §2 DM5).
+
+_DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
 
 @router.post("/{licitacion_id}/memoria/export")
-def export_pdf(
+def export_document(
     licitacion_id: str,
     body: MemoriaExportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    """Exporta el Markdown (del body o el persistido) a PDF."""
+    """Exporta el Markdown (del body o el persistido) a PDF o DOCX (5.6)."""
     licitacion = _owned_licitacion_or_404(licitacion_id, current_user.id, db)
 
     markdown = body.markdown
@@ -312,7 +314,11 @@ def export_pdf(
             status_code=status.HTTP_404_NOT_FOUND, detail="No hay documento que exportar."
         )
 
-    from app.services.memoria_export import render_markdown_pdf
+    from app.services.memoria_export import (
+        ExportOptions,
+        render_markdown_docx,
+        render_markdown_pdf,
+    )
 
     company = (
         db.query(CompanyProfile)
@@ -323,21 +329,39 @@ def export_pdf(
         .first()
     )
     now = datetime.now()
-    try:
-        pdf_bytes = render_markdown_pdf(
-            markdown,
-            variables={
-                "current_date": now.strftime("%d/%m/%Y"),
-                "current_year": str(now.year),
-                "company_name": company.name if company else "",
-                "tender_title": licitacion.title,
-                "document_title": document_title,
-                "user_name": current_user.full_name or current_user.email,
-                "user_email": current_user.email,
+    variables = {
+        "current_date": now.strftime("%d/%m/%Y"),
+        "current_year": str(now.year),
+        "company_name": company.name if company else "",
+        "tender_title": licitacion.title,
+        "document_title": document_title,
+        "user_name": current_user.full_name or current_user.email,
+        "user_email": current_user.email,
+    }
+    options = ExportOptions(
+        # Cabecera por defecto: nombre de empresa del perfil (5.6). El componente
+        # document-header del propio documento, si existe, manda sobre esto.
+        header_text=body.header_text if body.header_text is not None
+        else (company.name if company else None),
+        footer_text=body.footer_text,
+        logo_data_uri=body.logo_data_uri,
+        include_toc=body.include_toc,
+    )
+
+    if body.format == "docx":
+        docx_bytes = render_markdown_docx(markdown, variables=variables, options=options)
+        return Response(
+            content=docx_bytes,
+            media_type=_DOCX_MEDIA_TYPE,
+            headers={
+                "Content-Disposition": f'attachment; filename="memoria_{licitacion_id[:8]}.docx"'
             },
         )
+
+    try:
+        pdf_bytes = render_markdown_pdf(markdown, variables=variables, options=options)
     except OSError as e:
-        # WeasyPrint requiere libs nativas (GTK/Pango); faltan en dev Windows.
+        # WeasyPrint requiere libs nativas (Pango); pueden faltar en dev Windows.
         from app.core.logging import get_logger
 
         get_logger(__name__).error(f"Export a PDF falló (¿libs nativas?): {e}", exc_info=True)

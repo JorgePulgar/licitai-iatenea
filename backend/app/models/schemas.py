@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -397,6 +397,13 @@ class MemoriaDocChatResponse(BaseModel):
 class MemoriaExportRequest(BaseModel):
     markdown: Optional[str] = None  # si se omite, se usa el documento persistido
     doc_id: Optional[str] = None
+    # Opciones 5.6: formato de salida, índice y cabecera/pie por defecto.
+    # Si el documento trae sus propios componentes document-header/footer, mandan.
+    format: Literal["pdf", "docx"] = "pdf"
+    include_toc: bool = False
+    header_text: Optional[str] = None  # por defecto, nombre de la empresa del perfil
+    footer_text: Optional[str] = None
+    logo_data_uri: Optional[str] = None  # data: URI (el perfil no almacena logo aún)
 
 
 class MemoriaDocumentResponse(BaseModel):

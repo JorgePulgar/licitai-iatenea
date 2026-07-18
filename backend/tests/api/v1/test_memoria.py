@@ -487,6 +487,32 @@ def test_export_503_when_native_libs_missing(client_a):
     assert r.status_code == 503
 
 
+def test_export_docx_format(client_a):
+    """format=docx (5.6): media type de Word, extensión .docx y opciones propagadas."""
+    with patch("app.services.memoria_export.render_markdown_docx",
+               return_value=b"PK\x03\x04 fake docx") as mock_render:
+        r = client_a.post(
+            "/api/v1/licitaciones/lic-a/memoria/export",
+            json={"markdown": "# x", "format": "docx", "include_toc": True,
+                  "header_text": "ACME S.L.", "footer_text": "Oferta"},
+        )
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    assert 'filename="memoria_lic-a.docx"' in r.headers["content-disposition"]
+    options = mock_render.call_args.kwargs["options"]
+    assert options.include_toc is True
+    assert options.header_text == "ACME S.L."
+    assert options.footer_text == "Oferta"
+
+
+def test_export_invalid_format_rejected(client_a):
+    r = client_a.post("/api/v1/licitaciones/lic-a/memoria/export",
+                      json={"markdown": "# x", "format": "odt"})
+    assert r.status_code == 422
+
+
 # ── Documento ──────────────────────────────────────────────────────────────────
 
 def test_manual_save_updates_document(client_a):

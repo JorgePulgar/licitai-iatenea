@@ -34,7 +34,7 @@ Co-authors (Siro, Álvaro) own ~96% of the frontend and ~47% of the backend by g
 | `frontend/src/**` (entire SPA) | Phase FE | ✅ 2026-07-16 (DM7 FE-minimal: SPA antigua BORRADA y reemplazada; Phase FE = extender, no reescribir) |
 | `services/templates.py` + `endpoints/templates.py` + `prompts/templates.py` | 3.2b | ☐ |
 | `services/requirements.py` + `prompts/requirements.py` + `prompts/match.py` | 5.5 | ✅ 2026-07-05 (DM4; prompts clean-room, sin leer los antiguos) |
-| `services/memoria_export.py` | 5.6 | ☐ |
+| `services/memoria_export.py` | 5.6 | ✅ 2026-07-18 (rewrite ♻ desde spec funcional; añade DOCX, TOC, header/footer configurables) |
 | `endpoints/audit.py` | 1.6 (+5.2) | ✅ 2026-07-05 (rewrite 1.6; 5.2 lo extenderá) |
 | `endpoints/perfil.py` | 3.1 | ✅ 2026-07-16 (DM6, single-profile user-scoped; el paso a org-compartido llega con spec-3.1) |
 | `endpoints/query.py` | 1.7 | ✅ 2026-07-05 |
