@@ -1,7 +1,7 @@
 # Deuda técnica
 
 ### 2026-07-18 — Eval-lite (DM9): ejecución live, calibración y baseline pendientes de Azure
-- **Qué:** El harness `backend/eval/` está completo y testeado offline (49 tests), pero DM9 NO está cerrado: falta (1) etiquetar el golden set (Jorge, ~2 h/pliego: verificar las qa universales, añadir específicas hasta 15-25 y crear 5 `unanswerable` plausibles por licitación; al terminar `status: labeled` en cada YAML), (2) ejecutar contra el pipeline real, (3) calibrar el juez (revisar ~30 veredictos; desacuerdo >10 % ⇒ ajustar rúbrica antes de fiarse), (4) estampar baseline y (5) test de sabotaje (quitar la instrucción de citas de un prompt ⇒ S3 debe caer).
+- **Qué:** El harness `backend/eval/` está completo y testeado offline (49 tests), pero DM9 NO está cerrado: falta (1) ~~etiquetar el golden set~~ **revisar el pre-etiquetado** (2026-07-18: Claude etiquetó los 2 golden leyendo los PDF completos — 18 qa + 5 unanswerable cada uno; Jorge valida por muestreo y cambia `status: draft → labeled`, guía en `eval/golden/README.md`), (2) ejecutar contra el pipeline real, (3) calibrar el juez (revisar ~30 veredictos; desacuerdo >10 % ⇒ ajustar rúbrica antes de fiarse), (4) estampar baseline y (5) test de sabotaje (quitar la instrucción de citas de un prompt ⇒ S3 debe caer).
 - **Por qué:** Decisión 2026-07-18: no desplegar recursos Azure aún; esta máquina no tiene `backend/.env`.
 - **Impacto:** El gate de aceptación DM §7.4 (faithfulness ≥ 0.95, respuestas falsas = 0) no está medido — el momento demo «no lo encuentro» sigue sin garantía estadística.
 - **Propuesta:** Con `.env`: indexar las licitaciones fixture, `python -m eval.run --suite all --map ...`, calibrar, `--baseline`. Registrar fecha+scores aquí y marcar DM9 en la spec.

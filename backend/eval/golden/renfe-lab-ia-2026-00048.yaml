@@ -1,9 +1,14 @@
-# Golden dataset — Expediente 2026/00048 (PCP + Anexo I).
-# TODO(Jorge): confirmar título/objeto real del expediente al etiquetar.
-# Etiquetado: ver README.md de esta carpeta. Al terminar: status → labeled.
+# Golden dataset — Servicio de operación y evolución del Laboratorio de IA (RENFE-Operadora)
+# Expediente 2026-00048. PCP 34 págs + Anexo I Especificaciones Técnicas 42 págs.
+# Páginas = numeración del PDF (la numeración interna del PCP va desfasada +2).
+#
+# PRE-ETIQUETADO por Claude (2026-07-18) leyendo los PDF fixture completos.
+# Pendiente revisión de Jorge: verificar respuestas/páginas, ajustar lo que proceda
+# y cambiar a `status: labeled`. Si cambias etiquetas DESPUÉS de un baseline,
+# sube dataset_version.
 dataset_version: 1
-key: obras-2026-00048
-title: "Expediente 2026/00048 (título por confirmar al etiquetar)"
+key: renfe-lab-ia-2026-00048
+title: "Servicio de operación y evolución del Laboratorio de IA — RENFE (exp. 2026-00048)"
 status: draft
 
 documents:
@@ -15,17 +20,87 @@ documents:
 qa:
   - id: q01
     question: "¿Cuál es el objeto del contrato?"
+    expected_pages: [3]      # pcap §1.1
+    expected_answer: "La contratación del servicio de operación y evolución del Laboratorio de Inteligencia Artificial de RENFE-Operadora, con el alcance de las Especificaciones Técnicas del Anexo I."
   - id: q02
-    question: "¿Cuál es el presupuesto base de licitación?"
+    question: "¿Cuál es el presupuesto máximo de licitación?"
+    expected_pages: [4]      # pcap §1.7
+    expected_answer: "221.000,00 € IVA excluido (267.410,00 € con impuestos); las ofertas que lo superen quedan excluidas."
   - id: q03
     question: "¿Cuál es el plazo de ejecución del contrato?"
+    expected_pages: [20]     # pcap §8
+    expected_answer: "12 meses (plazo máximo estimado) desde la fecha establecida en la comunicación de adjudicación."
   - id: q04
-    question: "¿Qué requisitos de solvencia técnica se exigen?"
+    question: "¿Qué bloques componen el alcance del servicio?"
+    expected_pages: [3]      # pcap §1.2 (desarrollados en el anexo)
+    expected_answer: "Tres bloques: Bloque 1 Estrategia de IA (gobernanza, ideación, gestión del cambio); Bloque 2 Gestión táctica de proyectos y productos de IA (portfolio, FinOps); Bloque 3 Gestión técnica de sistemas de IA (arquitecturas, operación, stack tecnológico, assessment)."
   - id: q05
-    question: "¿Cuáles son los criterios de adjudicación?"
+    question: "¿Cuál es el código CPV de la licitación?"
+    expected_pages: [3]      # pcap §1.3
+    expected_answer: "CPV 79623000-7."
   - id: q06
-    question: "¿Cuál es el plazo de presentación de ofertas?"
+    question: "¿Cómo ponderan la oferta técnica y la económica en la valoración?"
+    expected_pages: [13]     # pcap §5.1
+    expected_answer: "Oferta técnica 80% y oferta económica 20%."
+  - id: q07
+    question: "¿Qué puntuación técnica mínima hay que alcanzar para no quedar excluido?"
+    expected_pages: [13]     # pcap §5.2
+    expected_answer: "Un mínimo de 40 puntos (sobre 80) en la valoración técnica; por debajo, la oferta queda excluida."
+  - id: q08
+    question: "¿Con qué fórmula se valora la oferta económica?"
+    expected_pages: [14]     # pcap §5.3
+    expected_answer: "PVEn = (Pm/Pn) × 20, donde Pm es el precio de la oferta más baja y Pn el de la oferta valorada; 20 puntos a la oferta más baja y el resto por proporcionalidad inversa."
+  - id: q09
+    question: "¿Qué solvencia técnica se exige?"
+    expected_pages: [18]     # pcap §6 (acreditación requisito solvencia técnica)
+    expected_answer: "Relación de trabajos de igual o similar naturaleza de los últimos 3 años; el importe anual acumulado del año de mayor ejecución debe ser ≥ 160.000,00 €."
+  - id: q10
+    question: "¿Cuál es el periodo de validez de la oferta?"
+    expected_pages: [20]     # pcap §7
+    expected_answer: "Mínimo 4 meses desde la fecha límite de presentación de ofertas."
+  - id: q11
+    question: "¿Se exige garantía provisional para licitar?"
+    expected_pages: [22]     # pcap §12.1
+    expected_answer: "No, no se exige garantía provisional en este procedimiento."
+  - id: q12
+    question: "¿Qué garantía definitiva debe constituir el adjudicatario?"
+    expected_pages: [23]     # pcap §12.2
+    expected_answer: "El 5% del importe adjudicado, mediante retención en factura o aval bancario electrónico (modelo del Anexo IV)."
+  - id: q13
+    question: "¿Cuál es el plazo de pago?"
+    expected_pages: [22]     # pcap §11
+    expected_answer: "30 días naturales desde la firma del acta de recepción del hito, si la factura se presenta en la Plataforma de Facturación Electrónica en 15 días; si no, desde la presentación de la factura."
+  - id: q14
+    question: "¿Qué plazo de garantía tienen los trabajos?"
+    expected_pages: [23]     # pcap §14
+    expected_answer: "12 meses desde la finalización del proyecto y su puesta en explotación, con soporte y resolución de incidencias incluidos."
+  - id: q15
+    question: "¿Cómo se resuelven los empates en la puntuación total?"
+    expected_pages: [14]     # pcap §5.5
+    expected_answer: "Por criterios sociales, en orden: mayor porcentaje del género subrepresentado en plantilla y, después, mayor porcentaje de contratos indefinidos."
+  - id: q16
+    question: "¿Qué equipo mínimo debe poner a disposición el adjudicatario y con qué experiencia?"
+    expected_pages: [34, 35]  # anexo §5
+    expected_answer: "Jefe del Servicio (Jefe de Proyecto Senior, >5 años), Arquitecto de IA (>3 años), Analista técnico/funcional de IA (Analista senior, >3 años) y Gestor del Cambio (>5 años)."
+  - id: q17
+    question: "¿Se contemplan prórrogas del contrato?"
+    expected_pages: [4]      # pcap §1.7
+    expected_answer: "No: el presupuesto base de licitación no incluye opciones ni prórrogas."
+  - id: q18
+    question: "¿Qué penalización conlleva no completar el Cuestionario de Evaluación de Seguridad de la Cadena de Suministro?"
+    expected_pages: [30, 31]  # pcap §22.6.2
+    expected_answer: "1.000 € si no se completa en 1 mes, 2.000 € con demora de 2 meses y 3.000 € con demora de 3 meses desde su recepción."
 
-unanswerable: []
-  # - id: u01
-  #   question: "¿Se admite la subcontratación del objeto principal del contrato?"
+# Preguntas plausibles SIN respuesta en el pliego (ausencia verificada por grep +
+# lectura). El pipeline debe devolver la respuesta canónica de no-información.
+unanswerable:
+  - id: u01
+    question: "¿En cuántos lotes se divide la licitación?"
+  - id: u02
+    question: "¿Se exige certificación ISO 27001 al adjudicatario?"
+  - id: u03
+    question: "¿Quiénes componen la mesa de contratación?"
+  - id: u04
+    question: "¿Cuál es la extensión máxima en páginas de la oferta técnica?"
+  - id: u05
+    question: "¿Es obligatoria una visita previa a las instalaciones antes de presentar oferta?"

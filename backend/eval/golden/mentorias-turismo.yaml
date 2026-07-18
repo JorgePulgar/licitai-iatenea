@@ -1,8 +1,13 @@
-# Golden dataset — Servicio de mentorías en digitalización a empresas de turismo (PRTR)
-# Etiquetado: ver README.md de esta carpeta. Al terminar: status → labeled.
+# Golden dataset — Servicio de mentorización de empresas turísticas (Impulso Digital 2026, NASERTIC)
+# Expediente Navarra (Ley Foral 2/2018). PCA 85 págs + PCT 9 págs (páginas = numeración del PDF).
+#
+# PRE-ETIQUETADO por Claude (2026-07-18) leyendo los PDF fixture completos.
+# Pendiente revisión de Jorge: verificar respuestas/páginas, ajustar lo que proceda
+# y cambiar a `status: labeled`. Si cambias etiquetas DESPUÉS de un baseline,
+# sube dataset_version.
 dataset_version: 1
 key: mentorias-turismo
-title: "Servicio de mentorías en digitalización a empresas de turismo (PRTR)"
+title: "Servicio de mentorización de empresas turísticas — Impulso Digital 2026 (NASERTIC)"
 status: draft
 
 documents:
@@ -11,30 +16,94 @@ documents:
   - document_type: ppt
     filename: "PCT_Servicio mentorías en digitalización a empresas de turismo (PRTR).pdf"
 
-# Preguntas RESPONDIBLES con el pliego (S3). Las 6 universales van de arranque:
-# verifica cada una contra el pliego, borra las no respondibles y añade
-# específicas hasta 15-25. expected_pages/expected_answer: opcionales (S1/S2).
+# Nota: expected_pages refiere al documento indicado en el comentario de cada ítem
+# (limitación del esquema lite: la lista no distingue documento).
 qa:
   - id: q01
     question: "¿Cuál es el objeto del contrato?"
+    expected_pages: [3, 4]   # ppt p.3 (descripción de necesidades) / pcap p.4 (§1)
+    expected_answer: "Seleccionar empresas/autónomos para mentorizar a empresas del sector turístico de Navarra en 5 áreas temáticas, dentro del programa formativo Impulso Digital 2026 (NASERTIC), financiado con fondos NextGenerationEU."
   - id: q02
-    question: "¿Cuál es el presupuesto base de licitación?"
+    question: "¿Cuál es el valor estimado de la licitación?"
+    expected_pages: [9]      # pcap
+    expected_answer: "208.335,16 € (IVA no incluido)."
   - id: q03
-    question: "¿Cuál es el plazo de ejecución del contrato?"
+    question: "¿Cuál es el coste/hora máximo de licitación?"
+    expected_pages: [10]     # pcap (también aparece en p.26)
+    expected_answer: "49,58 €/hora (IVA no incluido); las ofertas que lo superen serán desechadas."
   - id: q04
-    question: "¿Qué requisitos de solvencia técnica se exigen?"
+    question: "¿Cuál es el plazo de ejecución del contrato?"
+    expected_pages: [11]     # pcap; el ppt lo repite en p.8
+    expected_answer: "Duración máxima de 8 semanas, sin poder comenzar antes del 13 de abril de 2026."
   - id: q05
-    question: "¿Cuáles son los criterios de adjudicación?"
+    question: "¿En cuántos lotes se divide la licitación y cuáles son?"
+    expected_pages: [6, 7, 8]  # pcap §5; el ppt lo resume en p.3-5
+    expected_answer: "5 lotes: (1) E-commerce y reservas/herramientas multilingües, (2) IA y análisis de datos, (3) Marketing digital y experiencia de cliente, (4) Ciberseguridad y protección de datos, (5) Automatización e innovación tecnológica."
   - id: q06
-    question: "¿Cuál es el plazo de presentación de ofertas?"
-  # TODO(Jorge): añadir preguntas específicas del contenido, p. ej.:
-  # - id: q07
-  #   question: "¿Cuántas empresas de turismo deben recibir mentoría?"
-  #   expected_pages: [4]
-  #   expected_answer: "..."
+    question: "¿Qué solvencia económica y financiera se exige?"
+    expected_pages: [12]     # pcap
+    expected_answer: "Patrimonio neto positivo en 2024 (o acreditar medidas de reequilibrio en el ejercicio siguiente) y declaración jurada de cumplimiento de la normativa de morosidad (Anexo II)."
+  - id: q07
+    question: "¿Qué solvencia técnica o profesional se exige?"
+    expected_pages: [13]     # pcap
+    expected_answer: "Relación de contratos de acompañamiento, orientación y asesoramiento a empresas de los últimos 3 años (2023-2025) por importe total ≥ 7.000 € (IVA no incluido), con certificados de buena ejecución."
+  - id: q08
+    question: "¿Cuáles son los criterios de adjudicación y su ponderación?"
+    expected_pages: [23, 24]  # pcap
+    expected_answer: "Hasta 50 puntos criterios sometidos a juicio de valor (A.1 metodología y planificación hasta 35; A.2 especialización técnica hasta 15) y hasta 50 puntos criterios por fórmulas (oferta económica 20, criterios sociales 10, horas de mentorización 20). Total 100."
+  - id: q09
+    question: "¿Cuántos puntos puede obtener la oferta económica?"
+    expected_pages: [26]     # pcap B.1
+    expected_answer: "Hasta 20 puntos, según fórmula sobre el porcentaje de baja (Poferta = Pmáxima × BOoferta × K)."
+  - id: q10
+    question: "¿Cuál es el plazo de presentación de ofertas y cómo se presentan?"
+    expected_pages: [16]     # pcap
+    expected_answer: "Exclusivamente a través de PLENA; el plazo lo fija el anuncio en el Portal de Contratación de Navarra, mínimo 15 días desde el día siguiente a la publicación."
+  - id: q11
+    question: "¿Qué seguro de responsabilidad civil debe tener el contratista?"
+    expected_pages: [34]     # pcap §18
+    expected_answer: "Póliza de RC con límite de 300.000 € por siniestro y anualidad, incluyendo RC Profesional, RC General y RC Patronal (sublímite 150.000 € por víctima); con subcontratación, además RC Cruzada y RC Subsidiaria de Subcontratistas."
+  - id: q12
+    question: "¿Qué extensión máxima puede tener la propuesta técnica?"
+    expected_pages: [22]     # pcap
+    expected_answer: "Máximo 10 páginas por lote (sin contar portada, índice y anexos), letra no inferior a 10; solo se valoran las 10 primeras páginas si se excede."
+  - id: q13
+    question: "¿Qué penalidades se prevén por faltas muy graves?"
+    expected_pages: [47]     # pcap §29.3.2
+    expected_answer: "Entre el 5,01% y el 10% del precio del contrato, o resolución del contrato si se acredita incumplimiento culpable; el total de penalidades no puede exceder el 20% del importe de adjudicación."
+  - id: q14
+    question: "¿Cuál es el plazo de pago de las facturas?"
+    expected_pages: [44]     # pcap §27 (el abono se regula en p.43-44)
+    expected_answer: "60 días naturales desde la recepción de la factura o documento equivalente."
+  - id: q15
+    question: "¿Cuántas empresas se estima mentorizar en cada lote?"
+    expected_pages: [5]      # ppt (tabla)
+    expected_answer: "Lote 1: 36; lote 2: 49; lote 3: 66; lote 4: 5; lote 5: 20 empresas (estimación no vinculante)."
+  - id: q16
+    question: "¿Cómo se organizan las sesiones de mentoría grupal?"
+    expected_pages: [5, 6, 9]  # ppt §4.1 y calendario
+    expected_answer: "8 sesiones grupales de 2,5 h cada lunes (20 h por grupo), online, grabadas y publicadas en el Moodle del curso; grupos de 15-20 empresas."
+  - id: q17
+    question: "¿Cabe revisión de precios?"
+    expected_pages: [11]     # pcap §6
+    expected_answer: "No, no cabrá revisión de precios."
+  - id: q18
+    question: "¿En qué idioma debe presentarse la documentación de la oferta?"
+    expected_pages: [19, 22]  # pcap
+    expected_answer: "En castellano."
 
-# Preguntas PLAUSIBLES cuya respuesta NO está en el pliego (S4).
-# Exigen leer el pliego para confirmar la ausencia. Mínimo 3, objetivo 5.
-unanswerable: []
-  # - id: u01
-  #   question: "¿Se exige certificación ISO 27001 al adjudicatario?"
+# Preguntas plausibles SIN respuesta en el pliego (ausencia verificada por grep +
+# lectura). El pipeline debe devolver la respuesta canónica de no-información.
+unanswerable:
+  - id: u01
+    question: "¿Se exige alguna certificación ISO (9001 o 27001) a la empresa adjudicataria?"
+  - id: u02
+    question: "¿Qué clasificación empresarial como contratista del Estado se exige para licitar?"
+  - id: u03
+    question: "¿Qué importe de garantía provisional hay que constituir para participar en la licitación?"
+  - id: u04
+    question: "¿Es obligatorio disponer de oficina o sede en Navarra para ejecutar el contrato?"
+  - id: u05
+    # Trampa realista: el pcap menciona "eventuales prórrogas" solo como fórmula
+    # de cálculo del valor estimado (p.9), sin regular duración ni número.
+    question: "¿Cuál es la duración máxima de las prórrogas del contrato?"

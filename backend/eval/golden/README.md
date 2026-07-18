@@ -33,6 +33,15 @@ ficheros en `status: draft`: al terminar de etiquetar, cambia a `status: labeled
 
 | Fichero | Licitación | Estado |
 |---|---|---|
-| `mentorias-turismo.yaml` | Servicio mentorías digitalización turismo (PRTR) | draft — pendiente etiquetar |
-| `obras-2026-00048.yaml` | Expediente 2026/00048 (PCP + Anexo I) | draft — pendiente etiquetar (título por confirmar) |
+| `mentorias-turismo.yaml` | Servicio mentorización empresas turísticas — Impulso Digital 2026, NASERTIC (PRTR) | draft — **pre-etiquetado por Claude 2026-07-18** (18 qa + 5 unanswerable); pendiente revisión de Jorge → labeled |
+| `renfe-lab-ia-2026-00048.yaml` | Operación y evolución del Laboratorio de IA — RENFE (exp. 2026-00048) | draft — **pre-etiquetado por Claude 2026-07-18** (18 qa + 5 unanswerable); pendiente revisión de Jorge → labeled |
 | _(3º pliego)_ | por elegir en PLACSP (idealmente escaneado, para variedad) | pendiente |
+
+### Cómo revisar un pre-etiquetado (Jorge)
+
+1. Abre el PDF y comprueba por muestreo: ¿cada `expected_answer` es correcta y está
+   en las `expected_pages` indicadas? (páginas = numeración del PDF, no la impresa).
+2. Las `unanswerable` son la parte crítica: confirma que el pliego de verdad NO
+   responde cada una (la ausencia se verificó por búsqueda + lectura, pero el ojo
+   humano manda).
+3. Ajusta lo que proceda y cambia `status: draft` → `labeled`.

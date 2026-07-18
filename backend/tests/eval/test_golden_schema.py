@@ -110,7 +110,7 @@ class TestCommittedGoldenFiles:
         datasets = load_all_golden(GOLDEN_DIR)
         assert len(datasets) >= 2
         keys = {d.key for d in datasets}
-        assert {"mentorias-turismo", "obras-2026-00048"} <= keys
+        assert {"mentorias-turismo", "renfe-lab-ia-2026-00048"} <= keys
 
     def test_committed_documents_exist_in_fixtures(self):
         fixtures = Path(__file__).resolve().parents[1] / "fixtures" / "pliegos"
