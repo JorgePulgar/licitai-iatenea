@@ -1,2 +1,6 @@
+# Decisiones sobre build scripts de dependencias (protección supply-chain de pnpm).
+# msw: false — su postinstall solo inicializa el service worker para navegador;
+# los tests corren en node y no lo necesitan. Sin decisión explícita, un install
+# fresco (CI) falla con ERR_PNPM_IGNORED_BUILDS.
 allowBuilds:
-  msw: set this to true or false
+  msw: false
