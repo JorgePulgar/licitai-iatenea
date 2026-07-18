@@ -39,8 +39,9 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
+      # pytest/pytest-asyncio son deps de desarrollo, fuera de requirements.txt (runtime)
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pytest pytest-asyncio
 
       - name: Run test suite
         run: python -m pytest tests -q
