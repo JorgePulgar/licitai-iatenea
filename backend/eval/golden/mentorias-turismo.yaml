@@ -1,0 +1,40 @@
+# Golden dataset — Servicio de mentorías en digitalización a empresas de turismo (PRTR)
+# Etiquetado: ver README.md de esta carpeta. Al terminar: status → labeled.
+dataset_version: 1
+key: mentorias-turismo
+title: "Servicio de mentorías en digitalización a empresas de turismo (PRTR)"
+status: draft
+
+documents:
+  - document_type: pcap
+    filename: "PCA_Servicio mentorías en digitalización a empresas de turismo (PRTR).pdf"
+  - document_type: ppt
+    filename: "PCT_Servicio mentorías en digitalización a empresas de turismo (PRTR).pdf"
+
+# Preguntas RESPONDIBLES con el pliego (S3). Las 6 universales van de arranque:
+# verifica cada una contra el pliego, borra las no respondibles y añade
+# específicas hasta 15-25. expected_pages/expected_answer: opcionales (S1/S2).
+qa:
+  - id: q01
+    question: "¿Cuál es el objeto del contrato?"
+  - id: q02
+    question: "¿Cuál es el presupuesto base de licitación?"
+  - id: q03
+    question: "¿Cuál es el plazo de ejecución del contrato?"
+  - id: q04
+    question: "¿Qué requisitos de solvencia técnica se exigen?"
+  - id: q05
+    question: "¿Cuáles son los criterios de adjudicación?"
+  - id: q06
+    question: "¿Cuál es el plazo de presentación de ofertas?"
+  # TODO(Jorge): añadir preguntas específicas del contenido, p. ej.:
+  # - id: q07
+  #   question: "¿Cuántas empresas de turismo deben recibir mentoría?"
+  #   expected_pages: [4]
+  #   expected_answer: "..."
+
+# Preguntas PLAUSIBLES cuya respuesta NO está en el pliego (S4).
+# Exigen leer el pliego para confirmar la ausencia. Mínimo 3, objetivo 5.
+unanswerable: []
+  # - id: u01
+  #   question: "¿Se exige certificación ISO 27001 al adjudicatario?"

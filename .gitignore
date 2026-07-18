@@ -80,6 +80,9 @@ temp/
 uploads/
 backend/data/
 
+# Eval harness — reportes por run (artefactos locales; eval/baseline.json SÍ se versiona)
+backend/eval/reports/
+
 # ============================================
 # Notas de trabajo locales (no versionar)
 # ============================================

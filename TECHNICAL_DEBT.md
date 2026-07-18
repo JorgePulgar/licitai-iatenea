@@ -1,5 +1,17 @@
 # Deuda técnica
 
+### 2026-07-18 — Eval-lite (DM9): ejecución live, calibración y baseline pendientes de Azure
+- **Qué:** El harness `backend/eval/` está completo y testeado offline (49 tests), pero DM9 NO está cerrado: falta (1) etiquetar el golden set (Jorge, ~2 h/pliego: verificar las qa universales, añadir específicas hasta 15-25 y crear 5 `unanswerable` plausibles por licitación; al terminar `status: labeled` en cada YAML), (2) ejecutar contra el pipeline real, (3) calibrar el juez (revisar ~30 veredictos; desacuerdo >10 % ⇒ ajustar rúbrica antes de fiarse), (4) estampar baseline y (5) test de sabotaje (quitar la instrucción de citas de un prompt ⇒ S3 debe caer).
+- **Por qué:** Decisión 2026-07-18: no desplegar recursos Azure aún; esta máquina no tiene `backend/.env`.
+- **Impacto:** El gate de aceptación DM §7.4 (faithfulness ≥ 0.95, respuestas falsas = 0) no está medido — el momento demo «no lo encuentro» sigue sin garantía estadística.
+- **Propuesta:** Con `.env`: indexar las licitaciones fixture, `python -m eval.run --suite all --map ...`, calibrar, `--baseline`. Registrar fecha+scores aquí y marcar DM9 en la spec.
+
+### 2026-07-18 — Texto de página para el juez S3 solo cubre PDF nativos (pypdf)
+- **Qué:** `eval/pages.py` extrae el texto real de la página citada con pypdf. Un pliego escaneado (OCR) devuelve texto vacío → la cita se marca `page_text_unavailable` y queda fuera del ratio de faithfulness (contada y reportada, sin veredicto falso).
+- **Por qué:** El pipeline no persiste texto por página (solo chunks en AI Search); re-OCR por página en eval sería coste y acoplamiento innecesarios para el subset DM9 (los 4 fixtures son nativos).
+- **Impacto:** Cuando el corpus golden incorpore el pliego escaneado previsto por spec-5.3 §1, su S3 no medirá nada.
+- **Propuesta:** Persistir texto por página en la ingesta (blob `pages/<pliego_id>.json` o tabla) y que `FixturePageTextProvider` lo consuma como fuente preferente; alternativa: cachear el resultado de Document Intelligence de los fixtures en `tests/fixtures/`.
+
 ### 2026-07-16 — Subida de pliegos server-side provisional hasta spec-1.1
 - **Qué:** El FE-minimal sube los PDFs por multipart a `POST /licitaciones/upload` y el backend los persiste (`services/uploads.py`). Es el fallback previsto por spec-demo-minimal §3.3 ("else server-side upload — acceptable for demo env, note the debt"): sin SAS al navegador, pero los bytes pasan por la API (memoria/ancho de banda del backend) y no hay subida directa a Blob.
 - **Por qué:** El flujo seguro de SAS por blob individual es la tarea 1.1 (spec-1.1-sas.md), aún no implementada. El flujo antiguo (SAS de CONTENEDOR al navegador, finding #1) queda sin uso desde la SPA nueva, pero `GET /licitaciones/upload-token` sigue existiendo en el backend.

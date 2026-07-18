@@ -1,0 +1,31 @@
+# Golden dataset — Expediente 2026/00048 (PCP + Anexo I).
+# TODO(Jorge): confirmar título/objeto real del expediente al etiquetar.
+# Etiquetado: ver README.md de esta carpeta. Al terminar: status → labeled.
+dataset_version: 1
+key: obras-2026-00048
+title: "Expediente 2026/00048 (título por confirmar al etiquetar)"
+status: draft
+
+documents:
+  - document_type: pcap
+    filename: "DOC20260416085039PCP 2026 00048.pdf"
+  - document_type: anexo
+    filename: "DOC20260416085015ANEXO I 2026 00048.pdf"
+
+qa:
+  - id: q01
+    question: "¿Cuál es el objeto del contrato?"
+  - id: q02
+    question: "¿Cuál es el presupuesto base de licitación?"
+  - id: q03
+    question: "¿Cuál es el plazo de ejecución del contrato?"
+  - id: q04
+    question: "¿Qué requisitos de solvencia técnica se exigen?"
+  - id: q05
+    question: "¿Cuáles son los criterios de adjudicación?"
+  - id: q06
+    question: "¿Cuál es el plazo de presentación de ofertas?"
+
+unanswerable: []
+  # - id: u01
+  #   question: "¿Se admite la subcontratación del objeto principal del contrato?"

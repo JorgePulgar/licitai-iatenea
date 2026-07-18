@@ -54,6 +54,19 @@ Para preparar el equipo sin arrancar los servicios:
 BOOTSTRAP_ONLY=1 ./dev.sh
 ```
 
+#### Eval-lite (backend)
+
+Harness de evaluación RAG (suites S3 faithfulness + S4 refusal, spec 5.3 subset).
+Golden dataset etiquetado a mano en `backend/eval/golden/` (guía en su README).
+Requiere credenciales Azure (`backend/.env`); desde `backend/`:
+
+```bash
+python -m eval.run --suite all --map <golden_key>=<licitacion_id>   # reporte en eval/reports/
+python -m eval.run --suite all --map ... --baseline                 # estampa baseline (git limpio)
+```
+
+Deployment del juez configurable con `EVAL_JUDGE_MODEL` (por defecto `chat_pliego_4o`).
+
 #### Frontend (pnpm)
 
 El frontend usa **pnpm** (v11+) como único gestor de paquetes — no uses npm ni bun
