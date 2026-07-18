@@ -81,11 +81,11 @@ Review pattern: implement from spec → review the diff **against the spec's che
 |---|---|---|
 | 0 — Handover + fork | (done, no doc) | ✅ 2026-07-02: gitleaks clean, `tfm-final` pushed, repo forked + rebranded |
 | 1 — Security hardening | `phase-1-security.md` | ◐ 1.6/1.7/1.8 ✅ 2026-07-05 (DM1–DM3) — next: 1.1 |
-| 2 — Deployability | `phase-2-deploy.md` | ☐ |
+| 2 — Deployability | `phase-2-deploy.md` | ◐ CI offline ✅ 2026-07-18 (`.github/workflows/ci.yml`: pytest backend 250 + vitest/build FE en cada push/PR, verde en `main`); Bicep/deploy pendiente |
 | FE — Frontend rebuild | `phase-fe-frontend.md` | ◐ DM7 ✅ 2026-07-16 (FE-minimal, SPA antigua borrada) — resto de la fase = extender a paridad |
 | 3 — Self-service | `phase-3-selfservice.md` | ◐ DM6 ✅ 2026-07-16 (3.1 parcial: solo perfil) |
 | 4 — Reliability | `phase-4-reliability.md` | ◐ DM5 ✅ 2026-07-16 (solo ♻-scope de 4.1; cola/worker abiertos) |
-| 5 — Differentiators | `phase-5-differentiators.md` | ◐ 5.5 ✅ 2026-07-05 (pulled forward as DM4) |
+| 5 — Differentiators | `phase-5-differentiators.md` | ◐ 5.5 ✅ 2026-07-05 (DM4) · 5.6 ✅ 2026-07-18 (export ♻ PDF+DOCX) · 5.3-lite: harness+golden pre-etiquetados 2026-07-18, cierre DM9 espera Azure |
 
 Order: **1.6 → Phase 1 → 2 → FE → 3 → 4 → 5.** Sizes: S ≤1 day, M 2–4 days, L 1–2 weeks.
 
